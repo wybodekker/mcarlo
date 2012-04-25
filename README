@@ -34,16 +34,19 @@ kolom 1 berekend moet worden.
         mogelijkheid de uitvoer te filteren en statistiek op de resultaten
         van de verschillende variabelen los te laten.
 <tt>--list </tt><i>varname</i>::
-        Specificeert welke variabele zal worden geplot. De default
-        is: de laatst gespecificeerde variabele.
+        Specificeert welke variabelen worden geprint.
+        impliceert <tt>--verbose</tt>.
 <tt>--seed </tt><i>integer</i>::
         Initialiseert de randomgenerator met de opgegeven waarde. Vooral
         voor test-doeleinden: zorgt dat altijd dezelfde output wordt
         gegenereerd.
 <tt>--verbose</tt>::
-	Print gemiddelde en standaarddeviatie van de geplotte grootheid.
+        Print de waarden van alle (of de door <tt>--list</tt> gespecificeerde)
+        variabelen voor iedere stap. De volgende stap wordt gezet na
+        het typen van _enter_; de simulatie kan worden afgebroken met
+        _q_ _enter_.
 
-=== Enkelvoudige variabelen 
+=== Enkelvoudige variabelen
 ---
 Als die waarde enkelvoudig is (in tegenstelling tot een array) kan kolom 2
 een getal bevatten, of de naam van een eerder gedefinieerd sleutelwoord, of
