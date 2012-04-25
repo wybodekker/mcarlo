@@ -1,0 +1,18 @@
+--- !ruby/object:VR_ENV
+backup_path: /home/wybo
+browser: firefox
+browser_box: !ruby/object:VR::SimpleComboBoxEntry {}
+builder: !ruby/object:Gtk::Builder {}
+current_file: /home/wybo/tmp/Untitled
+font_name: Monospace 10
+glade_box: !ruby/object:VR::SimpleComboBoxEntry {}
+glade_path: glade
+height: 600
+open_files:
+- /home/wybo/tmp/Untitled
+open_folders: []
+panel_pos: 360
+rdoc_command_line: rdoc -x README
+run_command_line: ruby main.rb
+tab_spaces: 2
+width: 800
