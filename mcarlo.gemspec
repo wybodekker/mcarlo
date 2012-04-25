@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
 s.default_executable = 'mcarlo'
           s.has_rdoc = true
       s.rdoc_options = ["--main", "README"]
-             s.files = 'bin/mcarlo'
+             s.files = ['bin/mcarlo'] + Dir["test/*"]
   s.extra_rdoc_files = "README"
        s.executables = "mcarlo"
             s.bindir = 'bin'
