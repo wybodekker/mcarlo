@@ -43,10 +43,13 @@ OptionParser.new do |opt|
     number = v
   end
 
-  opt.on('-s','--seed=INT',Integer,'random seed') do |v| seed = v end
+  opt.on('-s','--seed=INT',Integer,'random seed - causes a fixed set of random numbers to be used') do |v| seed = v end
 
-  opt.on('-l','--list=STRING',String,'variables to be displayed, comma-separated') do |v|
-    list = v
+  opt.on('-l','--list=STRING',String,
+    'variables to be displayed, comma-separated',
+    'implies --verbose') do |v|
+    list = v.split(',')
+    verbose = true
   end
 
   opt.on('-h','--help',
@@ -54,7 +57,7 @@ OptionParser.new do |opt|
   ) do puts opt.help; exit; end
 
   opt.on('-v','--verbose',
-    'show some intermediate results'
+    'show values of all (or all --list-specified) variables for each step'
   ) do verbose = true end
 
   opt.on('-V','--version',
@@ -118,12 +121,12 @@ open(infile) do |infile|
   end
 end
 
-list ||= varlist[-1]
+list ||= varlist
+(l = list-varlist).empty? or quit("unknown variable#{l.size>1 ? 's' : ''} #{l.inspect} in --list option")
 maxlen = varlist.map {|v| v.size}.max # max length of variable name
 
-varlist.index(list) or quit("unknown variable #{list} in --list option")
 if verbose
-  varlist.each do |v|
+  list.each do |v|
     routine << "  puts '#{v.ljust(maxlen)}:' + #{v}.inspect\n"
   end
   routine << %q{
@@ -132,7 +135,6 @@ if verbose
     exit if q.strip == 'q'
   }
 end
-routine << "  return "+list
 routine << "\nend\n\n"
 
 # make internal vars non-constants with _ prefix
@@ -176,10 +178,10 @@ BEGIN {
 	  --stream \
 	  --legend 0 'NPV mean' \
 	  --legend 1 'SD last 10' \
-	  --ylabel '<%= list %> mean' \
+	  --ylabel '<%= varlist.last %> mean' \
 	  --y2label 'SD last 10' 2>/dev/null},'w')
 	% if verbose
-	puts "%11s %14s" % ["<%= list %>",'St. dev.']
+	puts "%11s %14s" % ["<%= varlist.last %>",'St. dev.']
 	% end
 	1.upto(number) do |i|
 	  npv.push(mccalc)
