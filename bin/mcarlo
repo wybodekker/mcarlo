@@ -24,6 +24,7 @@ def enter(k,v,str)
   line = "@vars.#{k} = #{v}"
   line.gsub!(/%/,'/100.0') if line =~ /%/ 
   str << line.gsub(/@vars\./,'')+"\n"
+  puts line.gsub(/@vars\./,'') if VERBOSE
   eval line
   k
 end
@@ -75,6 +76,7 @@ which('feedgnuplot') or quit("Could not find executable feedgnuplot")
 @vars = OpenStruct.new
 OPS = ['+','-','*','/','?',':','<','>','<=','>=','**']
 
+VERBOSE = verbose
 lineno = 0
 routine = "def mccalc\n"
 varlist,nonconst = [],[]
@@ -84,6 +86,7 @@ preamble = PREAMBLE.result(binding)
 open(infile) do |infile|
   infile.readlines.each do |l|
     lineno += 1
+    l.sub!(/#.*/,'')
     next if l =~ /^#/    # skip comment
     next if l =~ /^\s*$/ # skip lege regels
     var,*form = l.chomp.split(/\s+/).map do |x|
