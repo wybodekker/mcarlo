@@ -79,7 +79,7 @@ OPS = ['+','-','*','/','?',':','<','>','<=','>=','**']
 VERBOSE = verbose
 lineno = 0
 routine = "def mccalc\n"
-varlist,nonconst = [],[]
+varlist,nonconst,varexp = [],[],Regexp.new(/([A-Z][a-zA-Z]*)/)
 
 preamble = PREAMBLE.result(binding)
 
@@ -105,7 +105,8 @@ open(infile) do |infile|
     when :formula
       form = form.join(' ')
       # in formula's, prefix names that are defined in @vars with `@vars.':
-      form.gsub!(/([A-Z][a-zA-Z]*)/) {
+      # hoe zit dit: test ik hier alleen op de eerst-voorkomende variabele??
+      form.gsub!(varexp) {
         if @vars.respond_to?($1)
           "@vars."+$1
         else
@@ -138,7 +139,7 @@ if verbose
     exit if q.strip == 'q'
   }
 end
-routine << "\nend\n\n"
+routine << "  return(_#{varlist[-1]})\nend\n\n"
 
 # make internal vars non-constants with _ prefix
 nonconst.each { |v|
@@ -190,6 +191,10 @@ BEGIN {
 	  npv.push(mccalc)
 	  s = 0
 	  if i % every == 0
+            if npv.uniq.size == 1
+              puts("npv has a constant value of #{npv.shift}")
+              exit 1
+            end
 	    m = npv.mean
 	    mlast.push(m)
 	    if mlast.size >=10
