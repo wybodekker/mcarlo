@@ -167,6 +167,10 @@ levert een array met interest rates volgens Cox, Ingersoll en Ross,
 beginnend met 0.005 en berekend met mean reversion speed, long-term
 equilibrium interest rate, volatility of interest rate en eta.
 
+  CIR		0.075.cir(10, 0.6, 0.04, 0.021, -2.831) * 100.0
+
+levert een array [7.500, 3.772, 2.754, 2.515, 2.463, 2.452]
+
 === Enkelvoudige variabelen uit array variabelen
 ---
 Een expressie in kolom 2 kan ook uit een array weer een enkelvoudig getal opleveren.
