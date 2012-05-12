@@ -216,6 +216,7 @@ BEGIN {
 	  unit = 'seconds'
 	end
 	puts "           Run time (%s): %#12.3g" % [unit,t]
+        plot.close
 	EOD
 }
 # $Id$
