@@ -29,7 +29,7 @@ def enter(k,v,str)
   k
 end
 
-RELEASE = 2.01
+RELEASE = 2.05
 verbose,number,infile,list,seed = false,10000
 OptionParser.new do |opt|
   opt.banner =  "#{MYNAME} - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten\n"
@@ -130,11 +130,11 @@ list ||= varlist
 maxlen = varlist.map {|v| v.size}.max # max length of variable name
 
 if verbose
+  puts 'stepping, type q to stop '
   list.each do |v|
-    routine << "  puts '#{v.ljust(maxlen)}:' + #{v}.inspect\n"
+    routine << "  print '#{v.ljust(maxlen)}:'.sub(/^_/,'') + #{v}.inspect"
   end
   routine << %q{
-    print 'stepping, type q to stop '
     q = gets
     exit if q.strip == 'q'
   }
