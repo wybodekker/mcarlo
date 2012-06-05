@@ -22,14 +22,13 @@ end
 # make entry in @vars and return the name of the variable defined
 def enter(k,v,str)
   line = "@vars.#{k} = #{v}"
-  line.gsub!(/%/,'/100.0') if line =~ /%/ 
   str << line.gsub(/@vars\./,'')+"\n"
   puts line.gsub(/@vars\./,'') if VERBOSE
   eval line
   k
 end
 
-RELEASE = 2.05
+RELEASE = 2.06
 verbose,number,infile,list,seed = false,10000
 OptionParser.new do |opt|
   opt.banner =  "#{MYNAME} - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten\n"
@@ -89,15 +88,17 @@ open(infile) do |infile|
     l.sub!(/#.*/,'')
     next if l =~ /^#/    # skip comment
     next if l =~ /^\s*$/ # skip lege regels
-    var,*form = l.chomp.split(/\s+/).map do |x|
-      x.gsub!(/[-+*\/<>?:]+/) do |op| # be sure to space operators
+    var,*form = l.chomp.split(/\s+/)
+    form.map! do |x|
+      # replace number-fields ending in % with number/100
+      x = (x.to_f/100.0).to_s if x =~ /[-+.0-9]+%$/
+      # test validity of operators
+      x.scan(/[-+*\/<>?:]+/).each do |op|
         OPS.index(op) or quit("Line #{lineno}: Operator #{op} is not allowed; maybe you need parentheses?")
-        " #{op} "
       end
       x = nil if x.gsub(/\s+/,'').empty?
       x
     end
-    var =~ /^[A-Z]\w*$/ or quit("Line #{lineno}: Illegal variable `#{var}'\nvariables must contain [A-Za-z0-9_] only, starting with an uppercase letter")
 
     case form.formtype
     when :simple_assignment
@@ -129,10 +130,10 @@ list ||= varlist
 (l = list-varlist).empty? or quit("unknown variable#{l.size>1 ? 's' : ''} #{l.inspect} in --list option")
 maxlen = varlist.map {|v| v.size}.max # max length of variable name
 
-if verbose
+if VERBOSE
   puts 'stepping, type q to stop '
   list.each do |v|
-    routine << "  print '#{v.ljust(maxlen)}:'.sub(/^_/,'') + #{v}.inspect"
+    routine << "  puts '#{v.ljust(maxlen)}:'.sub(/^_/,'') + #{v}.inspect\n"
   end
   routine << %q{
     q = gets
@@ -180,19 +181,19 @@ BEGIN {
 	  --title "mcarlo2 n=<%= number %> seed=<%= seed.inspect %>" \
 	  --y2 1 \
 	  --stream \
-	  --legend 0 'NPV mean' \
+	  --legend 0 '<%= varlist.last %> mean' \
 	  --legend 1 'SD last 10' \
 	  --ylabel '<%= varlist.last %> mean' \
 	  --y2label 'SD last 10' 2>/dev/null},'w')
-	% if verbose
+	% if VERBOSE
 	puts "%11s %14s" % ["<%= varlist.last %>",'St. dev.']
 	% end
 	1.upto(number) do |i|
 	  npv.push(mccalc)
 	  s = 0
 	  if i % every == 0
-            if npv.uniq.size == 1
-              puts("npv has a constant value of #{npv.shift}")
+            if npv.size > 1 &&npv.uniq.size == 1
+              puts("<%= varlist.last %> has a constant value of #{npv.shift}")
               exit 1
             end
 	    m = npv.mean
@@ -202,8 +203,8 @@ BEGIN {
 	      plot.puts "#{m} #{s}"
 	      plot.flush
 	    end
-	% if verbose
-	    puts "%#12.4g %#12.4g" % [m,s]
+	% if VERBOSE
+	    puts "%12.4g %12.4g" % [m,s]
 	% end
 	  end
 	end
