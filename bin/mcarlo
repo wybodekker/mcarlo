@@ -10,9 +10,18 @@ class Array
   # return the type of the array in mcarlo terms:
   # a simple assignment, a formula, an array of values, an empty array
   def formtype
-    if join =~ /^[-+.[:digit:]]+$/ # numeric chars only?
+    j = join
+    if j =~ /^[-+.[:digit:]]+$/ # numeric chars only?
       return :simple_assignment if size == 1
       return :array
+    elsif j =~ /^dist\(/
+      if j =~ /^dist\((['"])(normal|lognormal|uniform|triangular)\1,[-+.\d]+%?,[-+.\d]+%?(,[-+.\d]+%?)?\)/
+        return :dist
+      else
+        quit("Distribution expression (#{j}) malformed")
+      end
+    elsif j =~ /^([^A-Za-z0-9(])/ 
+      quit("A formula (#{join(' ')}) may not start with #{$1}")
     else
       return :formula
     end
@@ -28,8 +37,8 @@ def enter(k,v,str)
   k
 end
 
-RELEASE = 2.06
-verbose,number,infile,list,seed = false,10000
+RELEASE = 2.07
+verbose,number,width,infile,list,seed = false,10000,8
 OptionParser.new do |opt|
   opt.banner =  "#{MYNAME} - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten\n"
   opt.banner << "Usage: #{MYNAME} [options] filename"
@@ -44,6 +53,8 @@ OptionParser.new do |opt|
   end
 
   opt.on('-s','--seed=INT',Integer,'random seed - causes a fixed set of random numbers to be used') do |v| seed = v end
+
+  opt.on('-w','--width=INT',Integer,'printing width for numbers, default: 8') do |v| width = v end
 
   opt.on('-l','--list=STRING',String,
     'variables to be displayed, comma-separated',
@@ -88,10 +99,10 @@ open(infile) do |infile|
     l.sub!(/#.*/,'')
     next if l =~ /^#/    # skip comment
     next if l =~ /^\s*$/ # skip lege regels
+    # replace number-fields ending in % with number/100
+    l.gsub!(/([-+.0-9]+)%/) { |x| x.to_f/100 }
     var,*form = l.chomp.split(/\s+/)
     form.map! do |x|
-      # replace number-fields ending in % with number/100
-      x = (x.to_f/100.0).to_s if x =~ /[-+.0-9]+%$/
       # test validity of operators
       x.scan(/[-+*\/<>?:]+/).each do |op|
         OPS.index(op) or quit("Line #{lineno}: Operator #{op} is not allowed; maybe you need parentheses?")
@@ -103,37 +114,34 @@ open(infile) do |infile|
     case form.formtype
     when :simple_assignment
       varlist.push(enter(var,form[0],preamble))
+    when :dist
+        varlist.push(enter(var,form.join,preamble))
     when :formula
       form = form.join(' ')
       # in formula's, prefix names that are defined in @vars with `@vars.':
-      # hoe zit dit: test ik hier alleen op de eerst-voorkomende variabele??
-      form.gsub!(varexp) {
+      form.gsub!(varexp) do
         if @vars.respond_to?($1)
           "@vars."+$1
         else
           quit("Line #{lineno}: Undefined variable #{$1}")
         end
-      }
-      if form =~ /^dist\(/
-        varlist.push(enter(var,form,preamble))
-      else
-        varlist.push(enter(var,form,routine))
-        nonconst.push(var) # remember which vars to prefix with _
       end
+      varlist.push(enter(var,form,routine))
+      nonconst.push(var) # remember which vars to prefix with _
     else # manual array
-      varlist.push(enter(var,form.map { |x| x.to_f }.inspect+'.to_magic',preamble))
+      varlist.push(enter(var,form.map { |x| x.to_f }.to_s+'.to_magic',preamble))
     end
   end
 end
 
 list ||= varlist
-(l = list-varlist).empty? or quit("unknown variable#{l.size>1 ? 's' : ''} #{l.inspect} in --list option")
+(l = list-varlist).empty? or quit("unknown variable#{l.size>1 ? 's' : ''} #{l} in --list option")
 maxlen = varlist.map {|v| v.size}.max # max length of variable name
 
 if VERBOSE
   puts 'stepping, type q to stop '
   list.each do |v|
-    routine << "  puts '#{v.ljust(maxlen)}:'.sub(/^_/,'') + #{v}.inspect\n"
+    routine << "  puts '#{v.ljust(maxlen)}:'.sub(/^_/,'') + #{v}.pr(#{width})\n"
   end
   routine << %q{
     q = gets
@@ -166,7 +174,7 @@ BEGIN {
 	require 'rubystats'
 	   number = <%= number %>
 	    every = number/100
-	     seed = <%= seed.inspect %>
+	     seed = <%= seed %>
 	starttime = Time.now
 	srand(seed.to_i) if seed
 	EOD
@@ -178,7 +186,7 @@ BEGIN {
 	  --extracmds 'set logscale y2' \
 	  --stream 0 \
 	  --xmin 0 --xmax 100 \
-	  --title "mcarlo2 n=<%= number %> seed=<%= seed.inspect %>" \
+	  --title "mcarlo2 n=<%= number %> seed=<%= seed || 'random'  %>" \
 	  --y2 1 \
 	  --stream \
 	  --legend 0 '<%= varlist.last %> mean' \
@@ -204,11 +212,11 @@ BEGIN {
 	      plot.flush
 	    end
 	% if VERBOSE
-	    puts "%12.4g %12.4g" % [m,s]
+	    puts [m.pr(<%= width %>),s.pr(<%= width %>)].join(' ')
 	% end
 	  end
 	end
-	puts npv.info("\nTest run with seed=<%= seed.inspect %>")
+	puts npv.info("\nTest run with seed=<%= seed || 'random' %>")
 	t = Time.now - starttime
 	if t > 600 
 	  t/=60
