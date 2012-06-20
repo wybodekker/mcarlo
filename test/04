@@ -1,0 +1,63 @@
+N                10
+ArDec            1
+VarDec           4
+DR               0.06
+GR               0.025
+Revspeed         0.5
+Lteq             0.06
+Volatility       0.021
+StartValue       100
+E                dist('normal',0,1)
+Eta              E.sample
+Year             2012.count(N)
+PowerN           1.count(N)
+CashFlow         StartValue.grow(N,GR)
+ExitValue        CashFlow.gradval(GR,DR) 
+NieuwCashFlow    ExitValue + CashFlow
+CirDiscountRate  0.006.cir(N, Revspeed, Lteq, Volatility, Eta)
+PowerCF          NieuwCashFlow/((CirDiscountRate+1)**PowerN)
+CirNPV           PowerCF.sum
+#ConstantDRNPV    NieuwCashFlow.npv(DR)
+
+# $Id$
+
+# n=1E6 -> 173s 
+#  operating system : Ubuntu 12.04LTS
+#           desktop : xubuntu
+#       kernel-name : Linux
+#          nodename : wybo
+#    kernel-release : 3.2.0-24-generic-pae
+#    kernel-version : #38-Ubuntu SMP Tue May 1 16:40:26 UTC 2012
+#           machine : i686
+#         processor : Intel(R) Core(TM) i3-2100 CPU @ 3.10GHz
+# hardware-platform : i386
+#        video-card : Intel Corporation 2nd Generation Core Processor Family Integrated Graphics Controller (rev 09)
+#     ethernet-card : Intel Corporation 82579LM Gigabit Network Connection (rev 04)
+#        audio-card : 00:1b.0 Audio device: Intel Corporation 6 Series/C200 Series Chipset Family High Definition Audio Controller (rev 04)
+#           cpu MHz : 1600
+#           cpu MHz : 3100
+#          bogomips : 6186
+#          cache kB : 3072
+#   cache_alignment : 64
+#           MemTota : 3917 MB
+
+# n=1E6 -> 185s 
+#  operating system : Ubuntu 12.04LTS
+#           desktop : xubuntu
+#       kernel-name : Linux
+#          nodename : wybo
+#    kernel-release : 3.2.0-25-generic
+#    kernel-version : #40-Ubuntu SMP Wed May 23 20:30:51 UTC 2012
+#           machine : x86_64
+#         processor : Intel(R) Core(TM) i3-2100 CPU @ 3.10GHz
+# hardware-platform : x86_64
+#        video-card : Intel Corporation 2nd Generation Core Processor Family Integrated Graphics Controller (rev 09)
+#     ethernet-card : Intel Corporation 82579LM Gigabit Network Connection (rev 04)
+#        audio-card : 00:1b.0 Audio device: Intel Corporation 6 Series/C200 Series Chipset Family High Definition Audio Controller (rev 04)
+#           cpu MHz : 1600
+#           cpu MHz : 3100
+#          bogomips : 6186
+#          cache kB : 3072
+#   cache_alignment : 64
+#           MemTota : 3843 MB
+
