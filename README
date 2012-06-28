@@ -80,6 +80,16 @@ functie gedefinieerde verdeling. Er zijn vier verdelingen beschikbaar:
 [triangular] wordt gedefinieerd met dist('triangular',lowerlimit,upperlimit,mode)
 [uniform] wordt gedefinieerd met dist('uniform',lowerlimit,upperlimit)
 
+Voor de normaal- en lognormaal-verdelingen kan de sample-methode twee argumenten meekrijgen: min en max.
+Wanneer min onbegrensd moet blijven, geef dan nil op; voorbeelden:
+
+Test	dist('normal',4%, 2%)
+S	Test.sample		# waarden tussen -oneindig en oneindig
+S	Test.sample(-1,1)	# waarden tussen -1 en 1
+S	Test.sample(nil,1)	# waarden tussen -oneindig en 1
+S	Test.sample(0)		# waarden tussen 0 en oneindig
+S	Test.sample(0,nil)	# waarden tussen 0 en oneindig
+
 Een voorbeeld:
 
   Growth	dist('normal',4%, 2%)
