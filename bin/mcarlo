@@ -37,7 +37,7 @@ def enter(k,v,str)
   k
 end
 
-RELEASE = 2.07
+RELEASE = 2.08
 verbose,number,width,infile,list,seed = false,10000,8
 OptionParser.new do |opt|
   opt.banner =  "#{MYNAME} - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten\n"
