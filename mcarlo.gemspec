@@ -9,9 +9,9 @@ Gem::Specification.new do |s|
           s.homepage = 'http://www.dekkerdocumenten.nl'
 s.default_executable = 'mcarlo'
           s.has_rdoc = true
-      s.rdoc_options = ["--main", "README"]
+      s.rdoc_options = ["--main", "lib/README"]
              s.files = ['bin/mcarlo'] + Dir["test/*"]
-  s.extra_rdoc_files = "README"
+  s.extra_rdoc_files = "lib/README"
        s.executables = "mcarlo"
             s.bindir = 'bin'
 end
