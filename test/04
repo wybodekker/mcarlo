@@ -40,6 +40,7 @@ CirNPV           PowerCF.sum
 #          cache kB : 3072
 #   cache_alignment : 64
 #           MemTota : 3917 MB
+# ===> verdubbeling memory tot 8G maakte niets uit
 
 # n=1E6 -> 185s 
 #  operating system : Ubuntu 12.04LTS
