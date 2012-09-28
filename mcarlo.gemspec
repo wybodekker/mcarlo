@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
               s.name = 'mcarlo'
-           s.version = "2.08"
+           s.version = "2.09"
            s.summary = 'mcarlo - MonteCarlo simulation for projects'
        s.description = 'see README'
             s.author = 'Wybo Dekker'
