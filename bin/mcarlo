@@ -164,6 +164,7 @@ postamble = POSTAMBLE.result(binding)
 
 script = preamble + "\n@npvs=[]\n" + routine + postamble
 tf = Tempfile.new('mcarlo')
+puts "Run file: #{tf.path}"
 tf.puts script
 tf.close
 exec 'ruby '+tf.path
@@ -229,9 +230,9 @@ BEGIN {
 	else
 	  unit = 'seconds'
 	end
+	plot.close
 	puts "           Run time (%s): %#12.3g" % [unit,t]
 	puts "Type <ctrl-C> to continue"
-	plot.close
 	% if distros 
 	e=nil
 	["<%= (distros||[]).join('","') %>"].each do |x|
