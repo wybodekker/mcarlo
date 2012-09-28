@@ -37,7 +37,7 @@ def enter(k,v,str)
   k
 end
 
-Version = "2.08"
+Version = "2.09"
 verbose,number,width,infile,list,seed,distros = false,10000,8
 OptionParser.new do |opt|
   opt.banner =  "#{MYNAME} - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten\n"
@@ -78,7 +78,7 @@ OptionParser.new do |opt|
 
   opt.on('-V','--version',
     'print version and exit'
-  ) do print_version(RELEASE) end
+  ) do print_version end
   opt.parse!
 end or quit("Error parsing options")
 
