@@ -38,7 +38,7 @@ def enter(k,v,str)
 end
 
 Version = "2.08"
-verbose,number,width,infile,list,seed = false,10000,8
+verbose,number,width,infile,list,seed,distros = false,10000,8
 OptionParser.new do |opt|
   opt.banner =  "#{MYNAME} - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten\n"
   opt.banner << "Usage: #{MYNAME} [options] filename"
@@ -56,11 +56,16 @@ OptionParser.new do |opt|
 
   opt.on('-w','--width=INT',Integer,'printing width for numbers, default: 8') do |v| width = v end
 
-  opt.on('-l','--list=STRING',String,
+  opt.on('-l','--list=string',String,
     'variables to be displayed, comma-separated',
     'implies --verbose') do |v|
     list = v.split(',')
     verbose = true
+  end
+
+  opt.on('-p','--plot=string',String,
+    'distros to be plotted, comma-separated') do |v|
+    distros = v.split(',')
   end
 
   opt.on('-h','--help',
@@ -148,7 +153,7 @@ if VERBOSE
     exit if q.strip == 'q'
   }
 end
-routine << "  return(_#{varlist[-1]})\nend\n\n"
+routine << "\n  @npvs.push(_NPV)\n  return(_#{varlist[-1]})\nend\n\n"
 
 # make internal vars non-constants with _ prefix
 nonconst.each { |v|
@@ -157,7 +162,7 @@ nonconst.each { |v|
 
 postamble = POSTAMBLE.result(binding)
 
-script = preamble + routine + postamble
+script = preamble + "\n@npvs=[]\n" + routine + postamble
 tf = Tempfile.new('mcarlo')
 tf.puts script
 tf.close
@@ -192,7 +197,7 @@ BEGIN {
 	  --legend 0 '<%= varlist.last %> mean' \
 	  --legend 1 'SD last 10' \
 	  --ylabel '<%= varlist.last %> mean' \
-	  --y2label 'SD last 10' 2>/dev/null},'w')
+	  --y2label 'SD last 10'},'w')
 	% if VERBOSE
 	puts "%11s %14s" % ["<%= varlist.last %>",'St. dev.']
 	% end
@@ -200,10 +205,10 @@ BEGIN {
 	  npv.push(mccalc)
 	  s = 0
 	  if i % every == 0
-            if npv.size > 1 &&npv.uniq.size == 1
-              puts("<%= varlist.last %> has a constant value of #{npv.shift}")
-              exit 1
-            end
+	    if npv.size > 1 &&npv.uniq.size == 1
+	      puts("<%= varlist.last %> has a constant value of #{npv.shift}")
+	      exit 1
+	    end
 	    m = npv.mean
 	    mlast.push(m)
 	    if mlast.size >=10
@@ -225,7 +230,52 @@ BEGIN {
 	  unit = 'seconds'
 	end
 	puts "           Run time (%s): %#12.3g" % [unit,t]
-        plot.close
+	puts "Type <ctrl-C> to continue"
+	plot.close
+	% if distros 
+	e=nil
+	["<%= (distros||[]).join('","') %>"].each do |x|
+	  eval "e = #{x}.samples"
+	 
+	  p = open("|gnuplot","w")
+	  p.print <<EOF
+	  reset
+	  n=50  #number of intervals
+	  min=#{e.shift.to_f}        #min value
+	  max=#{e.shift.to_f}        #max value
+	  width=(max-min)/n     #interval width
+	  hist(x,width)=width*floor(x/width)+width/2.0
+	  set xrange [min:max]
+	  set yrange [0:]
+	  set offset graph 0.05,0.05,0.05,0.0
+	  set boxwidth width*0.9
+	  set style fill solid 0.5      #fillstyle
+	  set tics out nomirror
+	  set xlabel "x"
+	  set ylabel "Frequency"
+	  plot "-" u (hist($1,width)):(1.0) smooth freq w boxes lc rgb"green" title '#{x}'
+	EOF
+	 
+	  p.puts e,'e','pause -1'
+          print "Hit Enter for the next plot: "
+	  gets
+	  p.close
+	end
+	% end
+
+  p = open("|gnuplot","w")
+  p.print <<EOF
+  reset
+  set xlabel 'Efficacy'
+  set ylabel 'NPV'
+  plot '-' w points t ''
+EOF
+  Efficacy.samples[2..-1].zip(@npvs).each { |v| p.puts v.join(' ') }
+  p.puts 'e','pause -1'
+          print "Hit Enter for the next plot: "
+  gets
+  p.close
 	EOD
+
 }
 # $Id$
