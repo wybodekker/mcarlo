@@ -5,6 +5,8 @@ require 'erb'
 require 'wdstats'
 require 'scriptingutils'
 require 'tempfile'
+require_relative '../lib/mcarlo/version'
+Version = Mcarlo::VERSION
 
 class Array
   # return the type of the array in mcarlo terms:
@@ -37,7 +39,6 @@ def enter(k,v,str)
   k
 end
 
-Version = "2.09"
 verbose,number,width,infile,list,seed,distros = false,10000,8
 OptionParser.new do |opt|
   opt.banner =  "#{MYNAME} - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten\n"
@@ -63,8 +64,8 @@ OptionParser.new do |opt|
     verbose = true
   end
 
-  opt.on('-p','--plot=string',String,
-    'distros to be plotted, comma-separated') do |v|
+  opt.on('-d','--dist=string',String,
+    'Distributions to be plotted, comma-separated') do |v|
     distros = v.split(',')
   end
 
@@ -230,17 +231,16 @@ BEGIN {
 	else
 	  unit = 'seconds'
 	end
-	plot.close
 	puts "           Run time (%s): %#12.3g" % [unit,t]
-	puts "Type <ctrl-C> to continue"
-	% if distros 
-	e=nil
+	% if distros
+	e,y = nil,-275
 	["<%= (distros||[]).join('","') %>"].each do |x|
 	  eval "e = #{x}.samples"
 	 
-	  p = open("|gnuplot","w")
+	  p = open("|gnuplot -geometry +0+#{y+=275} -display :0.0 -persist","w")
 	  p.print <<EOF
-	  reset
+	  set term x11 enhanced size 320,232
+	  #reset
 	  n=50  #number of intervals
 	  min=#{e.shift.to_f}        #min value
 	  max=#{e.shift.to_f}        #max value
@@ -257,26 +257,21 @@ BEGIN {
 	  plot "-" u (hist($1,width)):(1.0) smooth freq w boxes lc rgb"green" title '#{x}'
 	EOF
 	 
-	  p.puts e,'e','pause -1'
-          print "Hit Enter for the next plot: "
-	  gets
-	  p.close
+	  p.puts e,'e'
 	end
 	% end
-
-  p = open("|gnuplot","w")
-  p.print <<EOF
-  reset
-  set xlabel 'Efficacy'
-  set ylabel 'NPV'
-  plot '-' w points t ''
-EOF
-  Efficacy.samples[2..-1].zip(@npvs).each { |v| p.puts v.join(' ') }
-  p.puts 'e','pause -1'
-          print "Hit Enter for the next plot: "
-  gets
-  p.close
+	
+	  y = -275
+	  p = open("|gnuplot -geometry +360+#{y+=275} -display :0.0 -persist","w")
+	  p.print <<EOF
+	  set term x11 enhanced size 320,232
+	  #reset
+	  set xlabel 'Efficacy'
+	  set ylabel 'NPV'
+	  plot '-' w points t ''
+	EOF
+	  Efficacy.samples[2..-1].zip(@npvs).each { |v| p.puts v.join(' ') }
+	  p.puts 'e'
 	EOD
-
 }
 # $Id$
