@@ -5,21 +5,26 @@
 
    mcarlo [options] filename
    Options:
-       -n, --number=INT    set number of runs to INT
-       -l, --list=var 	   list this var; default: last one specified
-       -s, --seed=INT	   random seed
-       -h, --help          print this help and exit
-       -v, --verbose       show some intermediate results
-       -V, --version       print version and exit
+      -n, --number=INT    set number of runs to INT
+                          must be a multiple of 100
+                          default: 10,000
+      -s, --seed=INT      random seed - causes a fixed set of random numbers to be used
+      -w, --width=INT     printing width for numbers, default: 8
+      -l, --list=string   variables to be displayed, comma-separated
+                          implies --verbose
+      -d, --dist=string   Distributions to be plotted, comma-separated
+      -h, --help          print this help and exit
+      -v, --verbose       show values of all (or all --list-specified) variables for each step
+      -V, --version       print version and exit
 
 == Beschrijving
 
-*mcarlo* berekent bedrijfsresultaten op basis van bedrijfsgegevens die op een
-overzichtelijke manier in een tweekoloms, tab-gescheiden, tabel kunnen
+*mcarlo* berekent bedrijfsresultaten op basis van bedrijfsgegevens die op
+een overzichtelijke manier in een tweekoloms, tab-gescheiden, tabel kunnen
 worden aangeleverd. De eerste kolom van de tabel bevat sleutelwoorden die
-(op drie na, zie hierna) door de
-gebruiker gedefinieerd worden. Deze sleutelwoorden beginnen met een
-hoofdletter en bevatten verder alleen hoofd- en kleine letters.
+(op drie na, zie hierna) door de gebruiker gedefinieerd worden. Deze
+sleutelwoorden beginnen met een hoofdletter en bevatten verder alleen
+hoofd- en kleine letters.
 
 In de tweede kolom wordt gedefinieerd hoe de waarde van het sleutelwoord in
 kolom 1 berekend moet worden.
@@ -33,9 +38,16 @@ kolom 1 berekend moet worden.
         uitvoer gegenereerd wordt. Met een groter aantal runs onstaat de
         mogelijkheid de uitvoer te filteren en statistiek op de resultaten
         van de verschillende variabelen los te laten.
-<tt>--list </tt><i>varname</i>::
-        Specificeert welke variabelen worden geprint.
-        impliceert <tt>--verbose</tt>.
+<tt>--list</tt><i> varname [,varname...]</i>::
+        Komma-gescheiden lijst van variabelen die in iedere ronde moeten
+        worden afgedrukt; impliceert <tt>--verbose</tt>.
+<tt>--dist</tt><i> varname [,varname...]</i>::
+        Komma-gescheiden lijst van distributie-variabelen die na afloop
+        moeten worden geplot.
+<tt>--width </tt><i>n</i>::
+        Zet de veldbreedte (default 8) waarbinnen berekende waarden worden
+        afgedrukt. Het format waarmee dat gebeurt wordt automatisch
+        geoptimaliseerd.
 <tt>--seed </tt><i>integer</i>::
         Initialiseert de randomgenerator met de opgegeven waarde. Vooral
         voor test-doeleinden: zorgt dat altijd dezelfde output wordt
