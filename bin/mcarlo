@@ -39,67 +39,82 @@ def enter(k,v,str)
   k
 end
 
-verbose,number,width,infile,list,seed,distros = false,10000,8
-OptionParser.new do |opt|
-  opt.banner =  "#{MYNAME} - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten\n"
-  opt.banner << "Usage: #{MYNAME} [options] filename"
-  opt.separator "Options:"
+def handle_options
+  o = OpenStruct.new( 
+    :distros   => nil,
+    :list      => nil,
+    :infile    => nil,
+    :seed      => nil,
+    :width     => 8,
+    :number    => 10_000,
+    :verbose   => false,
+)
+  ARGV.options do |opt|
+    opt.banner =  "#{MYNAME} - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten\n"
+    opt.banner << "Usage: #{MYNAME} [options] filename"
+    opt.separator "Options:"
+ 
+    opt.on('-n','--number=INT',Integer,
+        	'set number of runs to INT',
+        	'must be a multiple of 100',
+        	'default: 10,000') do |v|
+      (v > 0) && (v % 100 == 0) or quit("The number of runs must be a multiple of 100")
+      o.number = v
+    end
+ 
+    opt.on('-s','--seed=INT',Integer,
+                'random seed - causes a fixed set of random numbers to be used') do |v| o.seed = v end
+ 
+    opt.on('-w','--width=INT',Integer,'printing width for numbers, default: 8') do |v| o.width = v end
+ 
+    opt.on('-l','--list=string',String,
+      'variables to be displayed, comma-separated',
+      'implies --verbose') do |v|
+      o.list = v.split(',')
+      o.verbose = true
+    end
+ 
+    opt.on('-d','--dist=string',String,
+      'Distributions to be plotted, comma-separated') do |v|
+      o.distros = v.split(',')
+    end
+ 
+    opt.on('-h','--help',
+      'print this help and exit'
+    ) do puts opt.help; exit; end
+ 
+    opt.on('-v','--verbose',
+      'show values of all (or all --list-specified) variables for each step'
+    ) do o.verbose = true end
+ 
+    opt.on('-V','--version',
+      'print version and exit'
+    ) do print_version end
+    opt.parse!
+  end or quit("Error parsing options",1)
+  o.infile = ARGV.shift
+  ARGV.empty? or quit("too many arguments: "+ARGV.join(" "))
+  o
+end
+o = init(%w{gnuplot feedgnuplot},:handle_options)
 
-  opt.on('-n','--number=INT',Integer,
-      	'set number of runs to INT',
-      	'must be a multiple of 100',
-      	'default: 10,000') do |v|
-    (v > 0) && (v % 100 == 0) or quit("The number of runs must be a multiple of 100")
-    number = v
-  end
-
-  opt.on('-s','--seed=INT',Integer,'random seed - causes a fixed set of random numbers to be used') do |v| seed = v end
-
-  opt.on('-w','--width=INT',Integer,'printing width for numbers, default: 8') do |v| width = v end
-
-  opt.on('-l','--list=string',String,
-    'variables to be displayed, comma-separated',
-    'implies --verbose') do |v|
-    list = v.split(',')
-    verbose = true
-  end
-
-  opt.on('-d','--dist=string',String,
-    'Distributions to be plotted, comma-separated') do |v|
-    distros = v.split(',')
-  end
-
-  opt.on('-h','--help',
-    'print this help and exit'
-  ) do puts opt.help; exit; end
-
-  opt.on('-v','--verbose',
-    'show values of all (or all --list-specified) variables for each step'
-  ) do verbose = true end
-
-  opt.on('-V','--version',
-    'print version and exit'
-  ) do print_version end
-  opt.parse!
-end or quit("Error parsing options")
-
-infile = ARGV[0] or quit("I need a filename")
-test(?e,infile)  or quit("File #{infile} does not exist")
-test(?r,infile)  or quit("File #{infile} is not readable")
+o.infile or quit("I need a filename")
+test(?e,o.infile)  or quit("File #{o.infile} does not exist")
+test(?r,o.infile)  or quit("File #{o.infile} is not readable")
 
 which('gnuplot') or quit("Could not find executable gnuplot")
 which('feedgnuplot') or quit("Could not find executable feedgnuplot")
 @vars = OpenStruct.new
 OPS = ['+','-','*','/','?',':','<','>','<=','>=','**']
 
-VERBOSE = verbose
+VERBOSE = o.verbose
 lineno = 0
 routine = "def mccalc\n"
 varlist,nonconst,varexp = [],[],Regexp.new(/([A-Z][a-zA-Z]*)/)
 
 preamble = PREAMBLE.result(binding)
 
-open(infile) do |infile|
+open(o.infile) do |infile|
   infile.readlines.each do |l|
     lineno += 1
     l.sub!(/#.*/,'')
@@ -140,14 +155,14 @@ open(infile) do |infile|
   end
 end
 
-list ||= varlist
-(l = list-varlist).empty? or quit("unknown variable#{l.size>1 ? 's' : ''} #{l} in --list option")
+o.list ||= varlist
+(l = o.list-varlist).empty? or quit("unknown variable#{l.size>1 ? 's' : ''} #{l} in --list option")
 maxlen = varlist.map {|v| v.size}.max # max length of variable name
 
 if VERBOSE
   puts 'stepping, type q to stop '
-  list.each do |v|
-    routine << "  puts '#{v.ljust(maxlen)}:'.sub(/^_/,'') + #{v}.pr(#{width})\n"
+  o.list.each do |v|
+    routine << "  puts '#{v.ljust(maxlen)}:'.sub(/^_/,'') + #{v}.pr(#{o.width})\n"
   end
   routine << %q{
     q = gets
@@ -179,51 +194,63 @@ BEGIN {
 	# encoding: utf-8
 	require 'wdstats'
 	require 'rubystats'
-	   number = <%= number %>
+	   number = <%= o.number %>
 	    every = number/100
-	     seed = <%= seed %>
+	     seed = <%= o.seed %>
 	starttime = Time.now
 	srand(seed.to_i) if seed
 	EOD
 
   POSTAMBLE = ERB.new(<<-'EOD'.tr("\t",""),nil,'%')
-	npv,mlast = [],[]
-	plot = open(%Q{|feedgnuplot \
-	  --lines --points \
-	  --extracmds 'set logscale y2' \
-	  --stream 0 \
-	  --xmin 0 --xmax 100 \
-	  --title "mcarlo2 n=<%= number %> seed=<%= seed || 'random'  %>" \
-	  --y2 1 \
-	  --stream \
-	  --legend 0 '<%= varlist.last %> mean' \
-	  --legend 1 'SD last 10' \
-	  --ylabel '<%= varlist.last %> mean' \
-	  --y2label 'SD last 10'},'w')
+	npv,mlast,pids = [],[],[]
+	th = Thread.new do
+	  Thread.current['ready'] = 0
+	  open(%Q{|feedgnuplot \
+	    --lines --points \
+	    --extracmds 'set logscale y2' \
+	    --stream 0 \
+	    --xmin 0 --xmax 100 \
+	    --title "mcarlo2 n=<%= o.number %> seed=<%= o.seed || 'random'  %>" \
+	    --y2 1 \
+	    --stream \
+	    --legend 0 '<%= varlist.last %> mean' \
+	    --legend 1 'SD last 10' \
+	    --ylabel '<%= varlist.last %> mean' \
+	    --y2label 'SD last 10'},'w') do |plot|
 	% if VERBOSE
-	puts "%11s %14s" % ["<%= varlist.last %>",'St. dev.']
+	    puts "%11s %14s" % ["<%= varlist.last %>",'St. dev.']
 	% end
-	1.upto(number) do |i|
-	  npv.push(mccalc)
-	  s = 0
-	  if i % every == 0
-	    if npv.size > 1 &&npv.uniq.size == 1
-	      puts("<%= varlist.last %> has a constant value of #{npv.shift}")
-	      exit 1
-	    end
-	    m = npv.mean
-	    mlast.push(m)
-	    if mlast.size >=10
-	      s = mlast[-10..-1].psd
-	      plot.puts "#{m} #{s}"
-	      plot.flush
-	    end
+	    pids.push(plot.pid)
+	    number.times do |i|
+	      npv.push(mccalc)
+	      s = 0
+	      if i % every == 0
+	        if npv.size > 1 &&npv.uniq.size == 1
+	          puts("<%= varlist.last %> has a constant value of #{npv.shift}")
+	          exit 1
+	        end
+	        m = npv.mean
+	        mlast.push(m)
+	        if mlast.size >=10
+	          s = mlast[-10..-1].psd
+	          plot.puts "#{m} #{s}"
+	          plot.flush
+	        end
 	% if VERBOSE
-	    puts [m.pr(<%= width %>),s.pr(<%= width %>)].join(' ')
+	        puts [m.pr(<%= o.width %>),s.pr(<%= o.width %>)].join(' ')
 	% end
+	      end
+	    end
+	    Thread.current['ready'] = 1
 	  end
 	end
-	puts npv.info("\nTest run with seed=<%= seed || 'random' %>")
+	while true do
+	  r = th['ready'] || 0
+	  break if r == 1
+	  sleep 1 
+	end
+
+	puts npv.info("\nTest run with seed=<%= o.seed || 'random' %>")
 	t = Time.now - starttime
 	if t > 600 
 	  t/=60
@@ -232,46 +259,54 @@ BEGIN {
 	  unit = 'seconds'
 	end
 	puts "           Run time (%s): %#12.3g" % [unit,t]
-	% if distros
+	% if o.distros
 	e,y = nil,-275
-	["<%= (distros||[]).join('","') %>"].each do |x|
+	["<%= (o.distros||[]).join('","') %>"].each do |x|
 	  eval "e = #{x}.samples"
 	 
-	  p = open("|gnuplot -geometry +0+#{y+=275} -display :0.0 -persist","w")
-	  p.print <<EOF
-	  set term x11 enhanced size 320,232
-	  #reset
-	  n=50  #number of intervals
-	  min=#{e.shift.to_f}        #min value
-	  max=#{e.shift.to_f}        #max value
-	  width=(max-min)/n     #interval width
-	  hist(x,width)=width*floor(x/width)+width/2.0
-	  set xrange [min:max]
-	  set yrange [0:]
-	  set offset graph 0.05,0.05,0.05,0.0
-	  set boxwidth width*0.9
-	  set style fill solid 0.5      #fillstyle
-	  set tics out nomirror
-	  set xlabel "x"
-	  set ylabel "Frequency"
-	  plot "-" u (hist($1,width)):(1.0) smooth freq w boxes lc rgb"green" title '#{x}'
+	  open("|gnuplot -geometry +0+#{y+=275} -display :0.0 -persist","w") do |p|
+	    pids.push(p.pid)
+	    p.print <<EOF
+	    set term x11 enhanced size 320,232
+	    n=50  #number of intervals
+	    min=#{e.shift.to_f}        #min value
+	    max=#{e.shift.to_f}        #max value
+	    width=(max-min)/n     #interval width
+	    hist(x,width)=width*floor(x/width)+width/2.0
+	    set xrange [min:max]
+	    set yrange [0:]
+	    set offset graph 0.05,0.05,0.05,0.0
+	    set boxwidth width*0.9
+	    set style fill solid 0.5      #fillstyle
+	    set tics out nomirror
+	    set xlabel "x"
+	    set ylabel "Frequency"
+	    plot "-" u (hist($1,width)):(1.0) smooth freq w boxes lc rgb"green" title '#{x}'
 	EOF
-	 
-	  p.puts e,'e'
+	   
+	    p.puts e,'e'
+	  end
 	end
 	% end
 	
-	  y = -275
-	  p = open("|gnuplot -geometry +360+#{y+=275} -display :0.0 -persist","w")
+	y = -275
+	open("|gnuplot -geometry +360+#{y+=275} -display :0.0 -persist","w") do |p|
+	  pids.push(p.pid)
 	  p.print <<EOF
 	  set term x11 enhanced size 320,232
-	  #reset
 	  set xlabel 'Efficacy'
 	  set ylabel 'NPV'
 	  plot '-' w points t ''
 	EOF
 	  Efficacy.samples[2..-1].zip(@npvs).each { |v| p.puts v.join(' ') }
 	  p.puts 'e'
+	end
+	p pids
+	puts "Type <enter> to stop"
+	gets
+	pids.each do |p|
+	  system "kill #{p+2}"
+	end
 	EOD
 }
 # $Id$
