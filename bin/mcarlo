@@ -202,7 +202,7 @@ BEGIN {
 	EOD
 
   POSTAMBLE = ERB.new(<<-'EOD'.tr("\t",""),nil,'%')
-	npv,mlast,pids = [],[],[]
+	npv,mlast = [],[]
 	th = Thread.new do
 	  Thread.current['ready'] = 0
 	  open(%Q{|feedgnuplot \
@@ -220,7 +220,6 @@ BEGIN {
 	% if VERBOSE
 	    puts "%11s %14s" % ["<%= varlist.last %>",'St. dev.']
 	% end
-	    pids.push(plot.pid)
 	    number.times do |i|
 	      npv.push(mccalc)
 	      s = 0
@@ -265,7 +264,6 @@ BEGIN {
 	  eval "e = #{x}.samples"
 	 
 	  open("|gnuplot -geometry +0+#{y+=275} -display :0.0 -persist","w") do |p|
-	    pids.push(p.pid)
 	    p.print <<EOF
 	    set term x11 enhanced size 320,232
 	    n=50  #number of intervals
@@ -291,7 +289,6 @@ BEGIN {
 	
 	y = -275
 	open("|gnuplot -geometry +360+#{y+=275} -display :0.0 -persist","w") do |p|
-	  pids.push(p.pid)
 	  p.print <<EOF
 	  set term x11 enhanced size 320,232
 	  set xlabel 'Efficacy'
@@ -301,11 +298,16 @@ BEGIN {
 	  Efficacy.samples[2..-1].zip(@npvs).each { |v| p.puts v.join(' ') }
 	  p.puts 'e'
 	end
-	p pids
+	
+	pids = `ps -o pid= -o comm=`.
+		split("\n").
+		map {|v| v =~ /gnuplot/ ? v.strip.split[0] : nil}.
+		compact
+	puts pids.join(' ')
 	puts "Type <enter> to stop"
 	gets
-	pids.each do |p|
-	  system "kill #{p+2}"
+	pids.each do |v|
+	  system("kill",v)
 	end
 	EOD
 }
