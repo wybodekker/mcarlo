@@ -32,6 +32,7 @@ end
 
 # make entry in @vars and return the name of the variable defined
 def enter(k,v,str)
+  @last = k
   line = "@vars.#{k} = #{v}"
   str << line.gsub(/@vars\./,'')+"\n"
   puts line.gsub(/@vars\./,'') if VERBOSE
@@ -74,9 +75,9 @@ def handle_options
       o.verbose = true
     end
  
-    opt.on('-d','--dist=string',String,
-      'Distributions to be plotted, comma-separated') do |v|
-      o.distros = v.split(',')
+    opt.on('-p','--plot=string',String,
+      'variables to be plotted, comma-separated') do |v|
+      o.vars = v.split(',')
     end
  
     opt.on('-h','--help',
@@ -107,10 +108,13 @@ which('feedgnuplot') or quit("Could not find executable feedgnuplot")
 @vars = OpenStruct.new
 OPS = ['+','-','*','/','?',':','<','>','<=','>=','**']
 
+@last = nil	# last variable - something like NPV
+@singulars = []	# names of non-constant singular variables that were defined
+
 VERBOSE = o.verbose
 lineno = 0
 routine = "def mccalc\n"
-varlist,nonconst,varexp = [],[],Regexp.new(/([A-Z][a-zA-Z]*)/)
+varlist,varexp = [],Regexp.new(/([A-Z][a-zA-Z]*)/)
 
 preamble = PREAMBLE.result(binding)
 
@@ -148,7 +152,7 @@ open(o.infile) do |infile|
         end
       end
       varlist.push(enter(var,form,routine))
-      nonconst.push(var) # remember which vars to prefix with _
+      @singulars.push(var) # remember which vars to prefix with _
     else # manual array
       varlist.push(enter(var,form.map { |x| x.to_f }.to_s+'.to_magic',preamble))
     end
@@ -158,6 +162,16 @@ end
 o.list ||= varlist
 (l = o.list-varlist).empty? or quit("unknown variable#{l.size>1 ? 's' : ''} #{l} in --list option")
 maxlen = varlist.map {|v| v.size}.max # max length of variable name
+
+# test if o.vars contains nonconstant singulars variables only::
+d = (o.vars||[])-@singulars
+unless d.empty? 
+  if d.size == 1 
+    quit("You want a plot of #@last vs. #{d.shift}, but #{d.shift} not a non-constant singular variable")
+  else
+    quit("You want a plots of #@last vs. #{d.join(' and ')}, but those aren't non-constant singular variables")
+  end
+end
 
 if VERBOSE
   puts 'stepping, type q to stop '
@@ -169,14 +183,18 @@ if VERBOSE
     exit if q.strip == 'q'
   }
 end
-routine << "\n  @npvs.push(_NPV)\n  return(_#{varlist[-1]})\nend\n\n"
+routine << "\n  @npvs.push(_#@last)\n"
+o.vars.each { |v| routine << "@_#{v}_samples.push(_#{v})\n" }
+routine << "\n  return(_#{varlist[-1]})\nend\n\n"
 
 # make internal vars non-constants with _ prefix
-nonconst.each { |v|
+@singulars.each { |v|
   routine = routine.gsub(/\b#{v}\b/m,'_'+v).sub(/(^  puts .)_/m,'\1')
 }
 
-postamble = POSTAMBLE.result(binding)
+postamble = ''
+o.vars.each { |v| postamble << "  @_#{v}_samples = []\n" }
+postamble << POSTAMBLE.result(binding)
 
 script = preamble + "\n@npvs=[]\n" + routine + postamble
 tf = Tempfile.new('mcarlo')
@@ -258,17 +276,16 @@ BEGIN {
 	  unit = 'seconds'
 	end
 	puts "           Run time (%s): %#12.3g" % [unit,t]
-	% if o.distros
 	e,y = nil,-275
-	["<%= (o.distros||[]).join('","') %>"].each do |x|
-	  eval "e = #{x}.samples"
+	["<%= (o.vars||[]).join('","') %>"].each do |x|
+	  eval "e = @_#{x}_samples"
 	 
 	  open("|gnuplot -geometry +0+#{y+=275} -display :0.0 -persist","w") do |p|
 	    p.print <<EOF
-	    set term x11 enhanced size 320,232
+	    set term x11 font "arial,4" enhanced size 320,232
 	    n=50  #number of intervals
-	    min=#{e.shift.to_f}        #min value
-	    max=#{e.shift.to_f}        #max value
+	    min=#{e.min}        #min value
+	    max=#{e.max}        #max value
 	    width=(max-min)/n     #interval width
 	    hist(x,width)=width*floor(x/width)+width/2.0
 	    set xrange [min:max]
@@ -277,31 +294,29 @@ BEGIN {
 	    set boxwidth width*0.9
 	    set style fill solid 0.5      #fillstyle
 	    set tics out nomirror
-	    set xlabel "x"
+	    set xlabel "#{x}"
 	    set ylabel "Frequency"
-	    plot "-" u (hist($1,width)):(1.0) smooth freq w boxes lc rgb"green" title '#{x}'
+	    plot "-" u (hist($1,width)):(1.0) smooth freq w boxes lc rgb "green" title ''
 	EOF
 	   
 	    p.puts e,'e'
 	  end
-	end
-	% end
 	
-	y = -275
-	open("|gnuplot -geometry +360+#{y+=275} -display :0.0 -persist","w") do |p|
-	  p.print <<EOF
-	  set term x11 enhanced size 320,232
-	  set xlabel 'Efficacy'
-	  set ylabel 'NPV'
-	  plot '-' w points t ''
+	  open("|gnuplot -geometry +360+#{y} -display :0.0 -persist","w") do |p|
+	    p.print <<EOF
+	    set term x11 font "arial,4" enhanced size 320,232
+	    set xlabel '#{x}'
+	    set ylabel '<%= @last %>'
+	    plot '-' w points t ''
 	EOF
-	  Efficacy.samples[2..-1].zip(@npvs).each { |v| p.puts v.join(' ') }
-	  p.puts 'e'
+	    e.zip(@npvs).each { |v| p.puts v.join(' ') }
+	    p.puts 'e'
+	  end
 	end
 	
 	pids = `ps -o pid= -o comm=`.
 		split("\n").
-		map {|v| v =~ /gnuplot/ ? v.strip.split[0] : nil}.
+		map {|v| v =~ /(gnuplot|perl)/ ? v.strip.split[0] : nil}.
 		compact
 	puts pids.join(' ')
 	puts "Type <enter> to stop"

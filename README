@@ -12,7 +12,7 @@
       -w, --width=INT     printing width for numbers, default: 8
       -l, --list=string   variables to be displayed, comma-separated
                           implies --verbose
-      -d, --dist=string   Distributions to be plotted, comma-separated
+      -p, --plot=string   Non-constant variables to be plotted, comma-separated
       -h, --help          print this help and exit
       -v, --verbose       show values of all (or all --list-specified) variables for each step
       -V, --version       print version and exit
@@ -41,9 +41,10 @@ kolom 1 berekend moet worden.
 <tt>--list</tt><i> varname [,varname...]</i>::
         Komma-gescheiden lijst van variabelen die in iedere ronde moeten
         worden afgedrukt; impliceert <tt>--verbose</tt>.
-<tt>--dist</tt><i> varname [,varname...]</i>::
-        Komma-gescheiden lijst van distributie-variabelen die na afloop
-        moeten worden geplot.
+<tt>--plot</tt><i> varname [,varname...]</i>:: Komma-gescheiden lijst van
+        niet-constante, singuliere variabelen die na afloop moeten worden
+        geplot. Per variabele wordt de verdeling ervan geplot, met
+        daarnaast de laatste variabele (meestal NPV) als functie van deze.
 <tt>--width </tt><i>n</i>::
         Zet de veldbreedte (default 8) waarbinnen berekende waarden worden
         afgedrukt. Het format waarmee dat gebeurt wordt automatisch
