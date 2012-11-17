@@ -184,7 +184,7 @@ if VERBOSE
   }
 end
 routine << "\n  @npvs.push(_#@last)\n"
-o.vars.each { |v| routine << "@_#{v}_samples.push(_#{v})\n" }
+o.vars.each { |v| routine << "@_#{v}_samples.push(_#{v})\n" } if o.vars
 routine << "\n  return(_#{varlist[-1]})\nend\n\n"
 
 # make internal vars non-constants with _ prefix
@@ -193,7 +193,7 @@ routine << "\n  return(_#{varlist[-1]})\nend\n\n"
 }
 
 postamble = ''
-o.vars.each { |v| postamble << "  @_#{v}_samples = []\n" }
+o.vars.each { |v| postamble << "  @_#{v}_samples = []\n" } if o.vars
 postamble << POSTAMBLE.result(binding)
 
 script = preamble + "\n@npvs=[]\n" + routine + postamble
@@ -277,53 +277,73 @@ BEGIN {
 	end
 	puts "           Run time (%s): %#12.3g" % [unit,t]
 	e,y = nil,-275
-	["<%= (o.vars||[]).join('","') %>"].each do |x|
-	  eval "e = @_#{x}_samples"
-	 
+	% if o.vars
+	  ["<%= (o.vars).join('","') %>"].each do |x|
+	    eval "e = @_#{x}_samples"
+	    open('tmp','w') do |p| 
+	      e.zip(@npvs.map{|v| v/1000.0}).sort.each { |v| p.puts v.join(' ') }
+	    end
+	   
+	    open("|gnuplot -geometry +0+#{y+=275} -display :0.0 -persist","w") do |p|
+	      p.print <<EOF
+	      set term x11 enhanced size 640,232
+	      n=50
+	      min=#{e.min}
+	      max=#{e.max}
+	      width=(max-min)/n
+	      hist(x,width)=width*floor(x/width)+width/2.0
+	      set origin 0,0
+	      set xrange [min:max]
+	      set x2range [min:max]
+	      set offset graph 0.05,0.05,0.05,0.0
+	      set boxwidth width*0.9
+	      set style fill solid 0.5      #fillstyle
+	      set tics out nomirror
+	      set y2tics out nomirror
+	      set xlabel "#{x}"
+	      set ylabel "Frequency" tc rgb 'blue'
+	      set y2label '<%= @last %> (k$)' tc rgb 'red'
+	      set autoscale y
+	      set autoscale y2
+	      plot 'tmp' u (hist($1,width)):(1.0) smooth freq w boxes lc rgb "blue" title '' axes x1y1, \
+	           'tmp' w l lc rgb "red" t '' axes x2y2
+	EOF
+	    end
+	  end
+	% end
+	  e = @npvs.map{|x| x/1000.0}
 	  open("|gnuplot -geometry +0+#{y+=275} -display :0.0 -persist","w") do |p|
 	    p.print <<EOF
-	    set term x11 font "arial,4" enhanced size 320,232
+	    set term x11 enhanced size 320,232
 	    n=50  #number of intervals
-	    min=#{e.min}        #min value
-	    max=#{e.max}        #max value
+	    min=#{e.min}      #min value
+	    max=#{e.max}      #max value
 	    width=(max-min)/n     #interval width
 	    hist(x,width)=width*floor(x/width)+width/2.0
 	    set xrange [min:max]
-	    set yrange [0:]
 	    set offset graph 0.05,0.05,0.05,0.0
 	    set boxwidth width*0.9
 	    set style fill solid 0.5      #fillstyle
 	    set tics out nomirror
-	    set xlabel "#{x}"
-	    set ylabel "Frequency"
-	    plot "-" u (hist($1,width)):(1.0) smooth freq w boxes lc rgb "green" title ''
+	    set autoscale y
+	    set xlabel "<%= @last %> (k$)" 
+	    set ylabel "Frequency" tc rgb 'blue'
+	    plot "-" u (hist($1,width)):(1.0) smooth freq w boxes lc rgb "blue" title ''
 	EOF
-	   
 	    p.puts e,'e'
 	  end
-	
-	  open("|gnuplot -geometry +360+#{y} -display :0.0 -persist","w") do |p|
-	    p.print <<EOF
-	    set term x11 font "arial,4" enhanced size 320,232
-	    set xlabel '#{x}'
-	    set ylabel '<%= @last %>'
-	    plot '-' w points t ''
-	EOF
-	    e.zip(@npvs).each { |v| p.puts v.join(' ') }
-	    p.puts 'e'
+	  
+	  
+	  pids = `ps -o pid= -o comm=`.
+	  	split("\n").
+	  	map {|v| v =~ /(gnuplot|perl)/ ? v.strip.split[0] : nil}.
+	  	compact
+	  puts pids.join(' ')
+	  puts "Type <enter> to stop"
+	  gets
+	  pids.each do |v|
+	    system("kill",v)
 	  end
-	end
-	
-	pids = `ps -o pid= -o comm=`.
-		split("\n").
-		map {|v| v =~ /(gnuplot|perl)/ ? v.strip.split[0] : nil}.
-		compact
-	puts pids.join(' ')
-	puts "Type <enter> to stop"
-	gets
-	pids.each do |v|
-	  system("kill",v)
-	end
 	EOD
 }
 # $Id$
