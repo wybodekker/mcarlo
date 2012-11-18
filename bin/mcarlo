@@ -49,6 +49,7 @@ def handle_options
     :width     => 8,
     :number    => 10_000,
     :verbose   => false,
+    :ylog      => false,
 )
   ARGV.options do |opt|
     opt.banner =  "#{MYNAME} - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten\n"
@@ -79,6 +80,8 @@ def handle_options
       'variables to be plotted, comma-separated') do |v|
       o.vars = v.split(',')
     end
+
+    opt.on('-y','--ylog','Y-axis logarithmic for scatter plots') do o.ylog = true end
  
     opt.on('-h','--help',
       'print this help and exit'
@@ -304,7 +307,7 @@ BEGIN {
 	      set y2label '<%= @last %>' tc rgb 'red'
 	      set autoscale x
 	      set autoscale y
-	      set logscale y2
+	      <%= o.ylog ? 'set logscale y2' : '' %>
 	      set autoscale y2
 	      plot '#{tmp.path}' u (hist($1,width)):(1.0) smooth freq w boxes lc rgb "blue" title '' axes x1y1, \
 	           '#{tmp.path}' w d lc rgb "red" t '' axes x2y2

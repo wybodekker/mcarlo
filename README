@@ -13,6 +13,7 @@
       -l, --list=string   variables to be displayed, comma-separated
                           implies --verbose
       -p, --plot=string   Non-constant variables to be plotted, comma-separated
+      -y, --ylog          Y-axis for scatterplots logarithmic
       -h, --help          print this help and exit
       -v, --verbose       show values of all (or all --list-specified) variables for each step
       -V, --version       print version and exit
@@ -49,6 +50,8 @@ kolom 1 berekend moet worden.
         Zet de veldbreedte (default 8) waarbinnen berekende waarden worden
         afgedrukt. Het format waarmee dat gebeurt wordt automatisch
         geoptimaliseerd.
+<tt>--ylog </tt>::
+	Maar y-as voor scatterplot  logaritmisch.
 <tt>--seed </tt><i>integer</i>::
         Initialiseert de randomgenerator met de opgegeven waarde. Vooral
         voor test-doeleinden: zorgt dat altijd dezelfde output wordt
