@@ -303,6 +303,7 @@ BEGIN {
 	      set xlabel "#{x}"
 	      set ylabel "Frequency" tc rgb 'blue'
 	      set y2label '<%= @last %>' tc rgb 'red'
+	      set y2tics out nomirror
 	      <%= o.ylog ? 'set logscale y2' : '' %>
 	      plot '#{tmp.path}' u (hist($1*1.0,width)):(1.0) smooth freq w boxes lc rgb "blue" title '' axes x1y1, \
 	           '#{tmp.path}' w d lc rgb "red" t '' axes x2y2
