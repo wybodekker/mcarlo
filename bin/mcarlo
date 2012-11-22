@@ -288,10 +288,7 @@ BEGIN {
 	    open(x+'.log','w') do |v| v.puts e.sort { |a,b| a<=>b } end
 	    tmp = Tempfile.new('mcarlo')
 	    e.zip(@npvs).each { |v| tmp.puts v.join(' ') }
-	   
-	    open("|gnuplot -geometry +0+#{y+=275} -display :0.0 -persist","w") do |p|
-	      p.print <<EOF
-	      set term x11 enhanced size 640,232
+	    body = <<EOF
 	      n=50
 	      min=#{e.min}
 	      max=#{e.max}
@@ -305,31 +302,37 @@ BEGIN {
 	      set y2label '<%= @last %>' tc rgb 'red'
 	      set y2tics out nomirror
 	      <%= o.ylog ? 'set logscale y2' : '' %>
-	      plot '#{tmp.path}' u (hist($1*1.0,width)):(1.0) smooth freq w boxes lc rgb "blue" title '' axes x1y1, \
-	           '#{tmp.path}' w d lc rgb "red" t '' axes x2y2
+	      plot '#{tmp.path}' u (hist($1*1.0,width)):(1.0) smooth freq with boxes linecolor rgb "blue" title '' axes x1y1, \
+	           '#{tmp.path}' with dots linecolor rgb "red" title '' axes x2y2
 	EOF
+	    open("|gnuplot -geometry +0+#{y+=275} -display :0.0 -persist","w") do |p|
+	      p.puts 'set terminal x11 size 640,232',"set output '#{x}.pdf'",body
+	    end
+	    open("|gnuplot","w") do |p|
+	      p.puts 'set terminal pdfcairo',"set output '#{x}.pdf'",body
 	    end
 	  end
 	% end
 	  e = @npvs
-	  open("|gnuplot -geometry +0+#{y+=275} -display :0.0 -persist","w") do |p|
-	    p.print <<EOF
-	    set term x11 enhanced size 640,232
+	  body = <<EOF
 	    n=50  #number of intervals
-	    min=#{e.min}      #min value
-	    max=#{e.max}      #max value
-	    width=(max-min)/n #interval width
+	    min=#{e.min}
+	    max=#{e.max}
+	    width=(max-min)/n
 	    hist(x,w)=w*floor(x/w)+w/2.0
 	    set tics out nomirror
 	    set xrange [min:max]
 	    set autoscale y
 	    set xlabel "<%= @last %>" 
 	    set ylabel "Frequency" tc rgb 'blue'
-	    plot "-" u (hist($1,width)):(1.0) smooth freq w boxes lc rgb "blue" title ''
+	    plot "-" u (hist($1,width)):(1.0) smooth freq with boxes linecolor rgb "blue" title ''
 	EOF
-	    p.puts e,'e'
+	  open("|gnuplot -geometry +0+#{y+=275} -display :0.0 -persist","w") do |p|
+	    p.puts 'set terminal x11 size 640,232',body,e
 	  end
-	  
+	  open("|gnuplot","w") do |p| # -geometry +0+#{y+=275} -display :0.0 -persist","w") do |p|
+	    p.puts 'set terminal pdfcairo','set output "<%= @last %>.pdf"',body,e
+	  end
 	  
 	  pids = `ps -o pid= -o comm=`.
 	  	split("\n").
