@@ -8,6 +8,10 @@ require 'tempfile'
 require_relative '../lib/mcarlo/version'
 Version = Mcarlo::VERSION
 
+class String 
+  def beautify; self.gsub(/([a-z])([A-Z])/,'\1 \2').gsub(/([A-Z]+)([A-Z][a-z])/,'\1 \2'); end
+end
+
 class Array
   # return the type of the array in mcarlo terms:
   # a simple assignment, a formula, an array of values, an empty array
@@ -221,6 +225,9 @@ BEGIN {
 	     seed = <%= o.seed %>
 	starttime = Time.now
 	srand(seed.to_i) if seed
+	class String 
+	  def beautify; self.gsub(/([a-z])([A-Z])/,'\1 \2').gsub(/([A-Z]+)([A-Z][a-z])/,'\1 \2'); end
+	end
 	EOD
 
   POSTAMBLE = ERB.new(<<-'EOD'.tr("\t",""),nil,'%')
@@ -238,7 +245,7 @@ BEGIN {
 	    --stream \
 	    --legend 0 '<%= varlist.last %> mean' \
 	    --legend 1 'SD last 10' \
-	    --ylabel '<%= varlist.last %> mean' \
+	    --ylabel '<%= varlist.last.beautify %> mean' \
 	    --y2label 'SD last 10'},'w') do |plot|
 	% if VERBOSE
 	    puts "%11s %14s" % ["<%= varlist.last %>",'St. dev.']
@@ -297,9 +304,9 @@ BEGIN {
 	      set tics out nomirror
 	      set xrange [min:max]
 	      set x2range [min:max]
-	      set xlabel "#{x}"
+	      set xlabel "#{x.beautify}"
 	      set ylabel "Frequency" tc rgb 'blue'
-	      set y2label '<%= @last %>' tc rgb 'red'
+	      set y2label '<%= @last.beautify %>' tc rgb 'red'
 	      set y2tics out nomirror
 	      <%= o.ylog ? 'set logscale y2' : '' %>
 	      plot '#{tmp.path}' u (hist($1*1.0,width)):(1.0) smooth freq with boxes linecolor rgb "blue" title '' axes x1y1, \
@@ -323,7 +330,7 @@ BEGIN {
 	    set tics out nomirror
 	    set xrange [min:max]
 	    set autoscale y
-	    set xlabel "<%= @last %>" 
+	    set xlabel "<%= @last.beautify %>" 
 	    set ylabel "Frequency" tc rgb 'blue'
 	    plot "-" u (hist($1,width)):(1.0) smooth freq with boxes linecolor rgb "blue" title ''
 	EOF
