@@ -7,7 +7,7 @@ require 'rake/testtask'
 require 'fileutils'
 
 @thismod = 'mcarlo'
-@gemroot = '/www/wdgems'
+@gemroot = '/local/gems' 
 @gemdir = File.join(@gemroot,'gems')
 test(?d,@gemdir) or raise(RuntimeError,"#{@gemdir} does not exist!\n")
 ROOT_DIR = File.dirname(__FILE__)
