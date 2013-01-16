@@ -321,6 +321,10 @@ BEGIN {
 	  end
 	% end
 	  e = @npvs
+	  pf = Tempfile.new('mcarlo')
+          pf.puts e.sort { |a,b| a<=>b }
+	  pfpath = pf.path
+	  pf.close
 	  body = <<EOF
 	    n=50  #number of intervals
 	    min=#{e.min}
@@ -332,13 +336,20 @@ BEGIN {
 	    set autoscale y
 	    set xlabel "<%= @last.beautify %>" 
 	    set ylabel "Frequency" tc rgb 'blue'
-	    plot "-" u (hist($1,width)):(1.0) smooth freq with boxes linecolor rgb "blue" title ''
+	    set y2label 'percent'
+	    set ytics nomirror
+	    set y2tics
+	    set grid y2
+	    set y2range [0:100]
+	    x=0
+	    plot "#{pfpath}" u (hist($1,width)):(1.0) axes x1y1 smooth freq with boxes linecolor rgb "blue" title '', \
+	          "" u ($1):(x=x+100.0/#{@npvs.size}) t 'count' axes x1y2 w l
 	EOF
 	  open("|gnuplot -geometry +0+#{y+=275} -display :0.0 -persist","w") do |p|
-	    p.puts 'set terminal x11 size 640,232',body,e
+	    p.puts 'set terminal x11 size 640,232',body
 	  end
 	  open("|gnuplot","w") do |p| # -geometry +0+#{y+=275} -display :0.0 -persist","w") do |p|
-	    p.puts 'set terminal pdfcairo','set output "<%= @last %>.pdf"',body,e
+	    p.puts 'set terminal pdfcairo','set output "<%= @last %>.pdf"',body
 	  end
 	  
 	  pids = `ps -o pid= -o comm=`.
