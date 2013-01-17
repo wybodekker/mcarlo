@@ -3,7 +3,6 @@
 require 'ostruct'
 require 'erb'
 require 'wdstats'
-require 'scriptingutils'
 require 'tempfile'
 require_relative '../lib/mcarlo/version'
 Version = Mcarlo::VERSION
@@ -54,7 +53,7 @@ def handle_options
     :number    => 10_000,
     :verbose   => false,
     :ylog     => false,
-)
+  )
   ARGV.options do |opt|
     opt.banner =  "#{MYNAME} - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten\n"
     opt.banner << "Usage: #{MYNAME} [options] filename"
@@ -104,14 +103,31 @@ def handle_options
   ARGV.empty? or quit("too many arguments: "+ARGV.join(" "))
   o
 end
+
+# file extraopts, if it exists, contains extra options:
+if File.exist?('extraopts') then
+  $VERBOSE = nil # temporarily no warnings for existing ARGV
+  puts "Reading extra options from file extraopts:\n"
+  open('extraopts') do |op| 
+    op.readlines.each do |l|
+      next if l =~ /^#/
+      puts "\t"+l
+      ARGV += l.split
+    end
+  end
+  $VERBOSE = true
+  puts 
+end
+
+# declare after treating ARGV:
+require 'scriptingutils'
+
 o = init(%w{gnuplot feedgnuplot},:handle_options)
 
 o.infile or quit("I need a filename")
 test(?e,o.infile)  or quit("File #{o.infile} does not exist")
 test(?r,o.infile)  or quit("File #{o.infile} is not readable")
 
-which('gnuplot') or quit("Could not find executable gnuplot")
-which('feedgnuplot') or quit("Could not find executable feedgnuplot")
 @vars = OpenStruct.new
 OPS = ['+','-','*','/','?',':','<','>','<=','>=','**']
 
@@ -181,7 +197,7 @@ unless d.empty?
 end
 
 if VERBOSE
-  puts 'stepping, type q to stop '
+  puts 'stepping, type <ctrl-C> to stop '
   o.list.each do |v|
     routine << "  puts '#{v.ljust(maxlen)}:'.sub(/^_/,'') + #{v}.pr(#{o.width})\n"
   end
@@ -205,7 +221,7 @@ postamble << POSTAMBLE.result(binding)
 
 script = preamble + "\n@npvs=[]\n" + routine + postamble
 tf = Tempfile.new('mcarlo')
-puts "Run file: #{tf.path}"
+puts "Run file: #{tf.path.err}"
 tf.puts script
 tf.close
 exec 'ruby '+tf.path
@@ -292,6 +308,11 @@ BEGIN {
 	% if o.vars
 	  ["<%= (o.vars).join('","') %>"].each do |x|
 	    eval "e = @_#{x}_samples"
+	    if e[0].class != Float then
+	        puts("[1;31mYou can not plot #{x} because it is an array[0m")
+	        next
+	    end
+	    open(x+'.log','w') do |v| v.puts e.sort { |a,b| a<=>b } end
 	    open(x+'.log','w') do |v| v.puts e.sort { |a,b| a<=>b } end
 	    tmp = Tempfile.new('mcarlo')
 	    e.zip(@npvs).each { |v| tmp.puts v.join(' ') }
