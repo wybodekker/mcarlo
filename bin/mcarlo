@@ -308,8 +308,8 @@ BEGIN {
 	        puts("[1;31mYou can not plot #{x} because it is an array[0m")
 	        next
 	    end
-	    open(x+'.log','w') do |v| v.puts e.sort { |a,b| a<=>b } end
-	    open(x+'.log','w') do |v| v.puts e.sort { |a,b| a<=>b } end
+	    #open(x+'.log','w') do |v| v.puts e.sort { |a,b| a<=>b } end
+	    #open(x+'.log','w') do |v| v.puts e.sort { |a,b| a<=>b } end
 	    tmp = Tempfile.new('mcarlo')
 	    e.zip(@npvs).each { |v| tmp.puts v.join(' ') }
 	    body = <<EOF
@@ -330,10 +330,10 @@ BEGIN {
 	           '#{tmp.path}' with dots linecolor rgb "red" title '' axes x2y2
 	EOF
 	    open("|gnuplot -geometry +0+#{y+=275} -display :0.0 -persist","w") do |p|
-	      p.puts 'set terminal x11 size 640,232',"set output '#{x}.pdf'",body
+	      p.puts 'set terminal x11 size 640,232',body
 	    end
 	    open("|gnuplot","w") do |p|
-	      p.puts 'set terminal pdfcairo',"set output '#{x}.pdf'",body
+	      p.puts 'set terminal png',"set output '#{x}.png'",body
 	    end
 	  end
 	% end
@@ -366,7 +366,7 @@ BEGIN {
 	    p.puts 'set terminal x11 size 640,232',body
 	  end
 	  open("|gnuplot","w") do |p| # -geometry +0+#{y+=275} -display :0.0 -persist","w") do |p|
-	    p.puts 'set terminal pdfcairo','set output "<%= @last %>.pdf"',body
+	    p.puts 'set terminal png','set output "<%= @last %>.png"',body
 	  end
 	  
 	  pids = `ps -o pid= -o comm=`.
