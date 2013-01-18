@@ -4,6 +4,7 @@ require 'ostruct'
 require 'erb'
 require 'wdstats'
 require 'tempfile'
+require 'scriptingutils'
 require_relative '../lib/mcarlo/version'
 Version = Mcarlo::VERSION
 
@@ -51,8 +52,8 @@ def handle_options
     :seed      => nil,
     :width     => 8,
     :number    => 10_000,
-    :verbose   => false,
-    :ylog     => false,
+    :verbose   => nil,
+    :ylog     => nil,
   )
   ARGV.options do |opt|
     opt.banner =  "#{MYNAME} - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten\n"
@@ -81,7 +82,7 @@ def handle_options
  
     opt.on('-p','--plot=string',String,
       'variables to be plotted, comma-separated') do |v|
-      o.vars = v.split(',')
+      o.plot = v.split(',')
     end
 
     opt.on('-y','--ylog','Frequency (left) Y-axis logarithmic for scatter plots') do o.ylog = true end
@@ -100,33 +101,22 @@ def handle_options
     opt.parse!
   end or quit("Error parsing options",1)
   o.infile = ARGV.shift
+  if ! o.infile then
+    if File.exist?('data.txt') then
+      o.infile = 'data.txt' 
+    else
+      quit("I need a filename or your input file must be named data.txt")
+    end
+  end
+  test(?e,o.infile)  or quit("File #{o.infile} does not exist")
+  test(?r,o.infile)  or quit("File #{o.infile} is not readable")
   ARGV.empty? or quit("too many arguments: "+ARGV.join(" "))
   o
 end
 
-# file extraopts, if it exists, contains extra options:
-if File.exist?('extraopts') then
-  $VERBOSE = nil # temporarily no warnings for existing ARGV
-  puts "Reading extra options from file extraopts:\n"
-  open('extraopts') do |op| 
-    op.readlines.each do |l|
-      next if l =~ /^#/
-      puts "\t"+l
-      ARGV += l.split
-    end
-  end
-  $VERBOSE = true
-  puts 
-end
-
-# declare after treating ARGV:
-require 'scriptingutils'
 
 o = init(%w{gnuplot feedgnuplot},:handle_options)
 
-o.infile or quit("I need a filename")
-test(?e,o.infile)  or quit("File #{o.infile} does not exist")
-test(?r,o.infile)  or quit("File #{o.infile} is not readable")
 
 @vars = OpenStruct.new
 OPS = ['+','-','*','/','?',':','<','>','<=','>=','**']
@@ -134,7 +124,6 @@ OPS = ['+','-','*','/','?',':','<','>','<=','>=','**']
 @last = nil	# last variable - something like NPV
 @singulars = []	# names of non-constant singular variables that were defined
 
-VERBOSE = o.verbose
 lineno = 0
 routine = "def mccalc\n"
 varlist,varexp = [],Regexp.new(/([A-Z][a-zA-Z]*)/)
@@ -144,12 +133,19 @@ preamble = PREAMBLE.result(binding)
 open(o.infile) do |infile|
   infile.readlines.each do |l|
     lineno += 1
-    l.sub!(/#.*/,'')
-    next if l =~ /^#/    # skip comment
+    l.sub!(/\s*#.*/,'')
     next if l =~ /^\s*$/ # skip lege regels
+    
     # replace number-fields ending in % with number/100
     l.gsub!(/([-+.0-9]+)%/) { |x| x.to_f/100 }
     var,*form = l.chomp.split(/\s+/)
+
+    # catch options:
+    if var =~ /--/ then
+      eval "o.#{var.sub(/--/,'')} = form[0].split(',')"
+      next
+    end
+    VERBOSE = o.verbose unless defined? VERBOSE
     form.map! do |x|
       # test validity of operators
       x.scan(/[-+*\/<>?:]+/).each do |op|
@@ -186,8 +182,8 @@ o.list ||= varlist
 (l = o.list-varlist).empty? or quit("unknown variable#{l.size>1 ? 's' : ''} #{l} in --list option")
 maxlen = varlist.map {|v| v.size}.max # max length of variable name
 
-# test if o.vars contains nonconstant singulars variables only::
-d = (o.vars||[])-@singulars
+# test if o.plot contains nonconstant singulars variables only::
+d = (o.plot||[])-@singulars
 unless d.empty? 
   if d.size == 1 
     quit("You want a plot of #@last vs. #{d.shift}, but #{d.shift} not a non-constant singular variable")
@@ -197,7 +193,7 @@ unless d.empty?
 end
 
 if VERBOSE
-  puts 'stepping, type <ctrl-C> to stop '
+  puts 'stepping, type <ctrl-C> to stop '.err
   o.list.each do |v|
     routine << "  puts '#{v.ljust(maxlen)}:'.sub(/^_/,'') + #{v}.pr(#{o.width})\n"
   end
@@ -207,7 +203,7 @@ if VERBOSE
   }
 end
 routine << "\n  @npvs.push(_#@last)\n"
-o.vars.each { |v| routine << "@_#{v}_samples.push(_#{v})\n" } if o.vars
+o.plot.each { |v| routine << "@_#{v}_samples.push(_#{v})\n" } if o.plot
 routine << "\n  return(_#{varlist[-1]})\nend\n\n"
 
 # make internal vars non-constants with _ prefix
@@ -216,7 +212,7 @@ routine << "\n  return(_#{varlist[-1]})\nend\n\n"
 }
 
 postamble = ''
-o.vars.each { |v| postamble << "  @_#{v}_samples = []\n" } if o.vars
+o.plot.each { |v| postamble << "  @_#{v}_samples = []\n" } if o.plot
 postamble << POSTAMBLE.result(binding)
 
 script = preamble + "\n@npvs=[]\n" + routine + postamble
@@ -305,8 +301,8 @@ BEGIN {
 	end
 	puts "           Run time (%s): %#12.3g" % [unit,t]
 	e,y = nil,-275
-	% if o.vars
-	  ["<%= (o.vars).join('","') %>"].each do |x|
+	% if o.plot
+	  ["<%= (o.plot).join('","') %>"].each do |x|
 	    eval "e = @_#{x}_samples"
 	    if e[0].class != Float then
 	        puts("[1;31mYou can not plot #{x} because it is an array[0m")
