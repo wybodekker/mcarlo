@@ -142,7 +142,7 @@ open(o.infile) do |infile|
 
     # catch options:
     if var =~ /--/ then
-      eval "o.#{var.sub(/--/,'')} = form[0].split(',')"
+      eval "o.#{var.sub(/--/,'')} = (form[0]||'').split(',')"
       next
     end
     VERBOSE = o.verbose unless defined? VERBOSE
