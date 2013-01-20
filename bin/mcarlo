@@ -53,7 +53,8 @@ def handle_options
     :width     => 8,
     :number    => 10_000,
     :verbose   => nil,
-    :ylog     => nil,
+    :ylog      => nil,
+    :font      => 'Courier,10',
   )
   ARGV.options do |opt|
     opt.banner =  "#{MYNAME} - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten\n"
@@ -83,6 +84,11 @@ def handle_options
     opt.on('-p','--plot=string',String,
       'variables to be plotted, comma-separated') do |v|
       o.plot = v.split(',')
+    end
+ 
+    opt.on('-f','--font=string',String,
+      'font for png output, default: "Courier,10"') do |v|
+      o.font = v
     end
 
     opt.on('-y','--ylog','Frequency (left) Y-axis logarithmic for scatter plots') do o.ylog = true end
@@ -117,7 +123,6 @@ end
 
 o = init(%w{gnuplot feedgnuplot},:handle_options)
 
-
 @vars = OpenStruct.new
 OPS = ['+','-','*','/','?',':','<','>','<=','>=','**']
 
@@ -141,8 +146,13 @@ open(o.infile) do |infile|
     var,*form = l.chomp.split(/\s+/)
 
     # catch options:
-    if var =~ /--/ then
-      eval "o.#{var.sub(/--/,'')} = (form[0]||'').split(',')"
+    if var =~ /--(.*)/ then
+      op = $1
+      if op =~/^(plot|list)/ then
+        eval "o.#{op} = (form[0]||'').split(',')"
+      else 
+        eval "o.#{op} = form.join(' ')"
+      end
       next
     end
     VERBOSE = o.verbose unless defined? VERBOSE
@@ -333,7 +343,7 @@ BEGIN {
 	      p.puts 'set terminal x11 size 640,232',body
 	    end
 	    open("|gnuplot","w") do |p|
-	      p.puts 'set terminal png',"set output '#{x}.png'",body
+	      p.puts "set terminal png font '<%= o.font %>'","set output '#{x}.png'",body
 	    end
 	  end
 	% end
@@ -366,7 +376,7 @@ BEGIN {
 	    p.puts 'set terminal x11 size 640,232',body
 	  end
 	  open("|gnuplot","w") do |p| # -geometry +0+#{y+=275} -display :0.0 -persist","w") do |p|
-	    p.puts 'set terminal png','set output "<%= @last %>.png"',body
+	    p.puts "set terminal png font '<%= o.font %>'",'set output "<%= @last %>.png"',body
 	  end
 	  
 	  pids = `ps -o pid= -o comm=`.
