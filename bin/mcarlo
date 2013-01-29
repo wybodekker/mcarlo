@@ -133,8 +133,9 @@ lineno = 0
 routine = "def mccalc\n"
 varlist,varexp = [],Regexp.new(/([A-Z][a-zA-Z]*)/)
 
-preamble = PREAMBLE.result(binding)
-
+# declare the preamble here, but read the template into it only after any
+# option statements have been read from the input file.
+preamble = nil
 open(o.infile) do |infile|
   infile.readlines.each do |l|
     lineno += 1
@@ -147,6 +148,7 @@ open(o.infile) do |infile|
 
     # catch options:
     if var =~ /--(.*)/ then
+      preamble && quit("All option statements must be in the beginning of the input file!")
       op = $1
       if op =~/^(plot|list)/ then
         eval "o.#{op} = (form[0]||'').split(',')"
@@ -155,6 +157,9 @@ open(o.infile) do |infile|
       end
       next
     end
+    
+    # options must have been read now 
+    preamble ||= PREAMBLE.result(binding)
     VERBOSE = o.verbose unless defined? VERBOSE
     form.map! do |x|
       # test validity of operators
