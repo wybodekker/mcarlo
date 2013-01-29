@@ -14,6 +14,7 @@
                           implies --verbose
       -p, --plot=string   Non-constant variables to be plotted, comma-separated
       -y, --ylog          Y-axis for scatterplots logarithmic
+      -f, --font          font for png output files, default: "Courier,10"
       -h, --help          print this help and exit
       -v, --verbose       show values of all (or all --list-specified) variables for each step
       -V, --version       print version and exit
@@ -51,7 +52,9 @@ kolom 1 berekend moet worden.
         afgedrukt. Het format waarmee dat gebeurt wordt automatisch
         geoptimaliseerd.
 <tt>--ylog </tt>::
-	Maar y-as voor scatterplot  logaritmisch.
+        Maar y-as voor scatterplot  logaritmisch.
+<tt>--font </tt><i>face,size</i>
+        Font voor png output files. De default is Courier,10.
 <tt>--seed </tt><i>integer</i>::
         Initialiseert de randomgenerator met de opgegeven waarde. Vooral
         voor test-doeleinden: zorgt dat altijd dezelfde output wordt
@@ -68,7 +71,7 @@ Als die waarde enkelvoudig is (in tegenstelling tot een array) kan kolom 2
 een getal bevatten, of de naam van een eerder gedefinieerd sleutelwoord, of
 een eenvoudige expressie. Enkele voorbeelden:
 
-  N		6
+  N             6
 
 Dit zijn meteen ook de ene variabele die vereist is, en die aan het
 begin van de file gedefinieerd moeten worden, in ieder geval voordat met
@@ -76,9 +79,9 @@ arrays gewerkt gaat worden. N is het aantal jaren waarover de evaluatie plaatsvi
 
 Nog enkele voorbeelden met expressies:
 
-  Growth	5%
-  Discount	Growth*0.8
-  Inflation	Growth > 10% ? 10% : Growth*0.8
+  Growth        5%
+  Discount      Growth*0.8
+  Inflation     Growth > 10% ? 10% : Growth*0.8
 
 We zien hier meteen dat getallen ook in de vorm van percentages kunnen
 worden ingegeven (10% is equivalent met 0.1) en dat als eenvoudige
@@ -99,21 +102,21 @@ functie gedefinieerde verdeling. Er zijn vier verdelingen beschikbaar:
 Voor de normaal- en lognormaal-verdelingen kan de sample-methode twee argumenten meekrijgen: min en max.
 Wanneer min onbegrensd moet blijven, geef dan nil op; voorbeelden:
 
-Test	dist('normal',4%, 2%)
-S	Test.sample		# waarden tussen -oneindig en oneindig
-S	Test.sample(-1,1)	# waarden tussen -1 en 1
-S	Test.sample(nil,1)	# waarden tussen -oneindig en 1
-S	Test.sample(0)		# waarden tussen 0 en oneindig
-S	Test.sample(0,nil)	# waarden tussen 0 en oneindig
+Test    dist('normal',4%, 2%)
+S       Test.sample             # waarden tussen -oneindig en oneindig
+S       Test.sample(-1,1)       # waarden tussen -1 en 1
+S       Test.sample(nil,1)      # waarden tussen -oneindig en 1
+S       Test.sample(0)          # waarden tussen 0 en oneindig
+S       Test.sample(0,nil)      # waarden tussen 0 en oneindig
 
 Een voorbeeld:
 
-  Growth	dist('normal',4%, 2%)
-  Xa		Growth.sample
-  Xb		Growth.sample
-  Xc		Growth.sample
-  Xd		Growth.sample
-  Xe		Growth.sample
+  Growth        dist('normal',4%, 2%)
+  Xa            Growth.sample
+  Xb            Growth.sample
+  Xc            Growth.sample
+  Xd            Growth.sample
+  Xe            Growth.sample
 
 Evaluatie van Growth.sample levert in Xa, Xb, Xc, Xd en Xe,
 bijvoorbeeld, 0.0353, 0.0584, 0.0485, 0.0336 en 0.0396
@@ -123,22 +126,22 @@ bijvoorbeeld, 0.0353, 0.0584, 0.0485, 0.0336 en 0.0396
 Een definitie in kolom 2 kan ook een array opleveren. Enkele voorbeelden
 maken dit snel duidelijk:
 
-  Year		2011	2012	2013	2014	2015	2016
+  Year          2011    2012    2013    2014    2015    2016
 
 Hier is een array van 6 jaren dus expliciet ingevoerd in 6 tab-gescheiden kolommen.
 
-  Year		2011.count
+  Year          2011.count
 
 Dit levert in Year hetzelfde resultaat op, waarbij de bovenaan gedefinieerde N het
 aantal kolommen bepaalt.
 
-  LabourCost	13.grow(Inflation)
+  LabourCost    13.grow(Inflation)
 
 Dit levert in LabourCost een array van 6 elementen op, het eerste is 13, de volgende
 groeien met de Inflation; het resultaat is dus [13, 13.52, 14.06, 14.62,
 15.21, 15.82]
 
-  LabourCost	13.grow(Inflation,2)
+  LabourCost    13.grow(Inflation,2)
 
 Het tweede argument (dat een default waarde 1 heeft) geeft aan in welk jaar
 de variabele zijn eerste waarde krijgt, hier dus in het tweede jaar (2012).
@@ -148,52 +151,52 @@ Arrays kunnen ook met elkaar of met een enkelvoudige variabele worden
 vermenigvuldigd, gedeeld, opgeteld, afgetrokken, waarbij de eventuele
 enkelvoudige variabele dat altijd de tweede operand moet zijn:
 
-  Years		Year*3
+  Years         Year*3
 
 levert in Years [6033, 6036, 6039, 6042, 6045, 6048] op.
 
-  Years		Year-2000
+  Years         Year-2000
 
 levert in Years [11, 12, 13, 14, 15, 16] op.
 
-  Yearsquare	Years*Years
+  Yearsquare    Years*Years
 
 vervangt de elementen van Years door hun kwadraten, wat dus [121, 144, 169, 196, 225, 256]
 oplevert.
 
-  Rsum		Years.runningsum
+  Rsum          Years.runningsum
 
 genereert de lopende som van de elementen (hier 11..16) van het array. Dat
 levert hier dus [11, 23, 36, 50, 65, 81].
 
-  MyArray	2	-5	-6	-7	8	6
-  Ppart		MyArray.pospart
+  MyArray       2       -5      -6      -7      8       6
+  Ppart         MyArray.pospart
 
 Vervangt alle negatieve elementen door 0 en levert dus in Ppart [2, 0, 6, 0, 8, 6] op.
 
-  Npart		MyArray.negpart
+  Npart         MyArray.negpart
 
 Vervangt alle positieve elementen door 0 en levert dus in Npart [0, -5, 0, -7, 0, 0] op.
 
-  MyArray	-100.0	12.0	13.0	14.0	15.0	16.0
-  Gval		MyArray.gradval(Growth,Discount)
+  MyArray       -100.0  12.0    13.0    14.0    15.0    16.0
+  Gval          MyArray.gradval(Growth,Discount)
 
 Levert een array van gelijke lengte, met alleen nullen, behalve in het laatste element, 
 dat de Graduation Value van de oorspronkelijke elementen bevat, berekend op basis van een
 Sustainable Growth Rate _Growth_ en een Discount Rate _Discount_.
 Gval wordt zo [0, 0, 0, 0, 0, -1680]
 
-  TCF		MyArray.tcf
+  TCF           MyArray.tcf
 
 Berekent Taxloss Carried Forward. TCF krijgt hier dus de waarde [0, -100, -88, -75, -61, -46.0]
 
-  CIR		0.005.cir(revspeed,lteq,volatility,eta)
+  CIR           0.005.cir(revspeed,lteq,volatility,eta)
 
 levert een array met interest rates volgens Cox, Ingersoll en Ross,
 beginnend met 0.005 en berekend met mean reversion speed, long-term
 equilibrium interest rate, volatility of interest rate en eta.
 
-  CIR		0.075.cir(10, 0.6, 0.04, 0.021, -2.831) * 100.0
+  CIR           0.075.cir(10, 0.6, 0.04, 0.021, -2.831) * 100.0
 
 levert een array [7.500, 3.772, 2.754, 2.515, 2.463, 2.452]
 
@@ -201,25 +204,25 @@ levert een array [7.500, 3.772, 2.754, 2.515, 2.463, 2.452]
 ---
 Een expressie in kolom 2 kan ook uit een array weer een enkelvoudig getal opleveren.
 
-  MySum		MyArray.sum
+  MySum         MyArray.sum
 
 levert in MySum de som van de array-elementen, hier dus -30
 
-  MyMin		MyArray.min
+  MyMin         MyArray.min
 
 levert in MyMin de laagste waarde van MyArray, -100
 
-  MyMax		MyArray.max
+  MyMax         MyArray.max
 
 levert in MyMax de maximum waarde van MyArray, 16
 
-  MyArray	9.35	9.91	10.50	11.13	11.80	12.51
-  NPV		MyArray.npv(5%)
+  MyArray       9.35    9.91    10.50   11.13   11.80   12.51
+  NPV           MyArray.npv(5%)
 
 levert in NPV de Net Present Value op basis van discount rate van, hier,
 5%, met 54.70 als resultaat.
 
-  IRR		MyArray.irr
+  IRR           MyArray.irr
 
 levert in IRR de Internal Rate of Return, hier 1443239783.29
 
