@@ -3,7 +3,7 @@
 # require'ing 'mcarlo'.
 module Mcarlo
   # The current version of this package
-  VERSION = '2.23'
+  VERSION = '2.24'
 end
 
 #$Id$
