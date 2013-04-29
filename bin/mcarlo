@@ -145,6 +145,8 @@ open(o.infile) do |infile|
     # replace number-fields ending in % with number/100
     l.gsub!(/([-+.0-9]+)%/) { |x| x.to_f/100 }
     var,*form = l.chomp.split(/\s+/)
+    var,*form = l.chomp.split(/\s+/)
+    var =~ /^[A-Z]/ or quit("User variables (#{var}) must be capitalized")
 
     # catch options:
     if var =~ /--(.*)/ then
