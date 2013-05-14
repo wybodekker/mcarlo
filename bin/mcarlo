@@ -121,7 +121,7 @@ def handle_options
 end
 
 
-o = init(%w{gnuplot feedgnuplot},:handle_options)
+o = init(%w{gnuplot},:handle_options)
 
 @vars = OpenStruct.new
 OPS = ['+','-','*','/','?',':','<','>','<=','>=','**']
@@ -260,55 +260,19 @@ BEGIN {
 	EOD
 
   POSTAMBLE = ERB.new(<<-'EOD'.tr("\t",""),nil,'%')
-	npv,mlast = [],[]
-	th = Thread.new do
-	  Thread.current['ready'] = 0
-	  open(%Q{|feedgnuplot \
-	    --lines \
-	    --points \
-	    --extracmds 'set logscale y2' \
-	    --stream 0 \
-	    --xmin 0 --xmax 100 \
-	    --title "mcarlo2 n=<%= o.number %> seed=<%= o.seed || 'random'  %>" \
-	    --y2 1 \
-	    --stream \
-	    --legend 0 '<%= varlist.last %> mean' \
-	    --legend 1 'SD last 10' \
-	    --ylabel '<%= varlist.last.beautify %> mean' \
-	    --y2label 'SD last 10'},'w') do |plot|
+	npv,mlast,p1 = [],[],number/100
 	% if VERBOSE
 	    puts "%11s %14s" % ["<%= varlist.last %>",'St. dev.']
 	% end
-	    number.times do |i|
-	      npv.push(mccalc)
-	      s = 0
-	      if i % every == 0
-	        if npv.size > 1 &&npv.uniq.size == 1
-	          puts("<%= varlist.last %> has a constant value of #{npv.shift}")
-	          exit 1
-	        end
-	        m = npv.mean
-	        mlast.push(m)
-	        if mlast.size >=10
-	          s = mlast[-10..-1].psd
-	          plot.puts "#{m} #{s}"
-	          plot.flush
-	        end
+	number.times do |i|
+	   npv.push(mccalc)
+	   printf("\r%3d%%  ",i/p1) if (i/p1)*p1 == i
 	% if VERBOSE
 	        puts [m.pr(<%= o.width %>),s.pr(<%= o.width %>)].join(' ')
 	% end
-	      end
-	    end
-	    Thread.current['ready'] = 1
-	  end
-	end
-	while true do
-	  r = th['ready'] || 0
-	  break if r == 1
-	  sleep 1 
 	end
 
-	puts npv.info("\nTest run with seed=<%= o.seed || 'random' %>")
+	puts "\r100%",npv.info("\nTest run with seed=<%= o.seed || 'random' %>")
 	t = Time.now - starttime
 	if t > 600 
 	  t/=60
@@ -325,8 +289,6 @@ BEGIN {
 	        puts("[1;31mYou can not plot #{x} because it is an array[0m")
 	        next
 	    end
-	    #open(x+'.log','w') do |v| v.puts e.sort { |a,b| a<=>b } end
-	    #open(x+'.log','w') do |v| v.puts e.sort { |a,b| a<=>b } end
 	    tmp = Tempfile.new('mcarlo')
 	    e.zip(@npvs).each { |v| tmp.puts v.join(' ') }
 	    body = <<EOF
