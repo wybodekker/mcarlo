@@ -254,18 +254,27 @@ BEGIN {
 	t = Time.now - starttime
 	t,unit = (t>600 ? [t/60,'minutes'] : [t,'seconds'])
 	puts "           Run time (%s): %#12.3g" % [unit,t]
-	e,voffset = nil,-275
+	e,voffset,error = nil,-275,false
 	% if o.plot
 	["<%= (o.plot).join('","') %>"].each do |xname|
 	  eval "e = @_#{xname}_samples"
 	  if e[0].class != Float then
 	      puts("[1;31mYou can not plot #{xname} because it is an array[0m")
+              error = true
 	      next
 	  end
-	  plothist(e.zip(@lastvar_samples),xname,'<%= @last %>',voffset+=275,'<%= o.font %>',<%= o.ylog %>)
 	end
+	exit 1 if error
 	% end
-	plothist(@lastvar_samples,'<%= @last %>','Percent',voffset+=275,'<%= o.font %>')
+	% if o.plot
+	plothist(@lastvar_samples.zip(<%=o.plot.map{|v| '@_'+v+'_samples'}.join(',') %>),
+		['<%= @last %>','<%= o.plot.join("','") %>'],
+		'<%= o.font %>')
+	% else
+	plothist(@lastvar_samples.map{|v| [v]},
+		['<%= @last %>'],
+		'<%= o.font %>')
+	% end
 	pids = `ps -o pid= -o comm=`.
 		split("\n").
 		map {|v| v =~ /(gnuplot|perl)/ ? v.strip.split[0] : nil}.
