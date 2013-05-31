@@ -132,6 +132,7 @@ varlist,varexp = [],Regexp.new(/([A-Z][a-zA-Z]*)/)
 # declare the preamble here, but read the template into it only after any
 # option statements have been read from the input file.
 preamble = nil
+o.path = File.dirname(File.absolute_path(o.infile))
 open(o.infile) do |infile|
   infile.readlines.each do |l|
     lineno += 1
@@ -267,11 +268,11 @@ BEGIN {
 	exit 1 if error
 	% end
 	% if o.plot
-	plothist(@lastvar_samples.zip(<%=o.plot.map{|v| '@_'+v+'_samples'}.join(',') %>),
+	plothist('<%= o.path %>',@lastvar_samples.zip(<%=o.plot.map{|v| '@_'+v+'_samples'}.join(',') %>),
 		['<%= @last %>','<%= o.plot.join("','") %>'],
 		'<%= o.font %>')
 	% else
-	plothist(@lastvar_samples.map{|v| [v]},
+	plothist('<%= o.path %>',@lastvar_samples.map{|v| [v]},
 		['<%= @last %>'],
 		'<%= o.font %>')
 	% end
