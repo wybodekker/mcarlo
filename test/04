@@ -19,7 +19,6 @@ PowerCF          NieuwCashFlow/((CirDiscountRate+1)**PowerN)
 CirNPV           PowerCF.sum
 #ConstantDRNPV    NieuwCashFlow.npv(DR)
 
-# $Id$
 
 # n=1E6 -> 173s 
 #  operating system : Ubuntu 12.04LTS

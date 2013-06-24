@@ -288,4 +288,3 @@ BEGIN {
 	end
 	EOD
 }
-# $Id$

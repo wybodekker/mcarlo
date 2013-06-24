@@ -27,5 +27,3 @@ Gem::Specification.new do |spec|
   spec.rdoc_options += %w(--main README)
   spec.rdoc_options += ['--title', "#{@thismod} #{spec.version} Documentation"]
 end
-
-# $Id$

@@ -120,5 +120,3 @@ task :help do
   doc	   Create Ruby docs in doc subdirectory
   EOF
 end
-
-#$Id$

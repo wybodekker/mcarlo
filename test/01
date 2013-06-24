@@ -24,4 +24,3 @@ EBITDA         NetProfit+Interest+Tax+Depreciation
 CashFlow       EBITDA-Interest-Tax
 NPV            CashFlow.npv(DiscountRate)
 IRR            CashFlow.irr
-# $Id$

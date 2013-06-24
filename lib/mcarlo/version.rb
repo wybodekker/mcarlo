@@ -5,5 +5,3 @@ module Mcarlo
   # The current version of this package
   VERSION = '2.28'
 end
-
-#$Id$

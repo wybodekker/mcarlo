@@ -23,4 +23,3 @@ NPVUncorrected         Profit.npv(Discountrate)
 NPVCorrected           (NPVUncorrected*(1 + Discountrate)**0.5)/(1 + Discountrate)**3
 NPVSalvageCorrected    NPVCorrected<100 ? DiscountedSalvageValue : NPVCorrected
 NPV                    NPVSalvageCorrected-Costs
-# $Id$
