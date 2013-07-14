@@ -44,7 +44,6 @@ def handle_options
   o = OpenStruct.new( 
     :distros   => nil,
     :list      => nil,
-    :infile    => nil,
     :seed      => nil,
     :width     => 8,
     :number    => 10_000,
@@ -102,25 +101,20 @@ def handle_options
     ) do print_version end
     opt.parse!
   end or quit("Error parsing options",1)
-  o.infile = ARGV.shift
-  if ! o.infile then
-    if File.exist?('data.txt') then
-      o.infile = 'data.txt' 
-    else
-      quit("I need a filename or your input file must be named data.txt")
-    end
-  end
-  test(?e,o.infile)  or quit("File #{o.infile} does not exist")
-  test(?r,o.infile)  or quit("File #{o.infile} is not readable")
+  o.infile = ARGV.shift # may be nil`
   ARGV.empty? or quit("too many arguments: "+ARGV.join(" "))
   o
 end
-
+OPS = ['+','-','*','/','?',':','<','>','<=','>=','**']
+@vars = OpenStruct.new
 
 o = init(%w{gnuplot},:handle_options)
-
-@vars = OpenStruct.new
-OPS = ['+','-','*','/','?',':','<','>','<=','>=','**']
+if o.infile # called on the command line
+  test(?e,o.infile)  or quit("File #{o.infile} does not exist")
+  test(?r,o.infile)  or quit("File #{o.infile} is not readable")
+else	# called from the web interface
+  quit "no imput file specified"
+end
 
 @last = nil	# last variable - something like NPV
 @singulars = []	# names of non-constant singular variables that were defined
