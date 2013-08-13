@@ -109,11 +109,15 @@ OPS = ['+','-','*','/','?',':','<','>','<=','>=','**']
 @vars = OpenStruct.new
 
 o = init(%w{gnuplot},:handle_options)
-if o.infile # called on the command line
+inlines = []
+if o.infile # input file specified
   test(?e,o.infile)  or quit("File #{o.infile} does not exist")
   test(?r,o.infile)  or quit("File #{o.infile} is not readable")
-else	# called from the web interface
-  quit "no imput file specified"
+  open(o.infile) { |i| inlines = i.readlines }
+  o.path = File.dirname(File.absolute_path(o.infile))
+else	# read input from stdin
+  inlines = STDIN.readlines
+  o.path = '.'
 end
 
 @last = nil	# last variable - something like NPV
@@ -126,63 +130,60 @@ varlist,varexp = [],Regexp.new(/([A-Z][a-zA-Z]*)/)
 # declare the preamble here, but read the template into it only after any
 # option statements have been read from the input file.
 preamble = nil
-o.path = File.dirname(File.absolute_path(o.infile))
-open(o.infile) do |infile|
-  infile.readlines.each do |l|
-    lineno += 1
-    l.sub!(/\s*#.*/,'')
-    next if l =~ /^\s*$/ # skip lege regels
-    
-    # replace number-fields ending in % with number/100
-    l.gsub!(/([-+.0-9]+)%/) { |x| x.to_f/100 }
-    var,*form = l.chomp.split(/\s+/)
-    var,*form = l.chomp.split(/\s+/)
-    var =~ /^[A-Z]/ or quit("User variables (#{var}) must be capitalized")
+inlines.each do |l|
+  lineno += 1
+  l.sub!(/\s*#.*/,'')
+  next if l =~ /^\s*$/ # skip lege regels
+  
+  # replace number-fields ending in % with number/100
+  l.gsub!(/([-+.0-9]+)%/) { |x| x.to_f/100 }
+  var,*form = l.chomp.split(/\s+/)
+  var,*form = l.chomp.split(/\s+/)
+  var =~ /^[A-Z]/ or quit("User variables (#{var}) must be capitalized")
 
-    # catch options:
-    if var =~ /--(.*)/ then
-      preamble && quit("All option statements must be in the beginning of the input file!")
-      op = $1
-      if op =~/^(plot|list)/ then
-        eval "o.#{op} = (form[0]||'').split(',')"
-      else 
-        eval "o.#{op} = form.join(' ')"
-      end
-      next
+  # catch options:
+  if var =~ /--(.*)/ then
+    preamble && quit("All option statements must be in the beginning of the input file!")
+    op = $1
+    if op =~/^(plot|list)/ then
+      eval "o.#{op} = (form[0]||'').split(',')"
+    else 
+      eval "o.#{op} = form.join(' ')"
     end
-    
-    # options must have been read now 
-    preamble ||= PREAMBLE.result(binding)
-    VERBOSE = o.verbose unless defined? VERBOSE
-    form.map! do |x|
-      # test validity of operators
-      x.scan(/[-+*\/<>?:]+/).each do |op|
-        OPS.index(op) or quit("Line #{lineno}: Operator #{op} is not allowed; maybe you need parentheses?")
-      end
-      x = nil if x.gsub(/\s+/,'').empty?
-      x
+    next
+  end
+  
+  # options must have been read now 
+  preamble ||= PREAMBLE.result(binding)
+  VERBOSE = o.verbose unless defined? VERBOSE
+  form.map! do |x|
+    # test validity of operators
+    x.scan(/[-+*\/<>?:]+/).each do |op|
+      OPS.index(op) or quit("Line #{lineno}: Operator #{op} is not allowed; maybe you need parentheses?")
     end
+    x = nil if x.gsub(/\s+/,'').empty?
+    x
+  end
 
-    case form.formtype
-    when :simple_assignment
-      varlist.push(enter(var,form[0],preamble))
-    when :dist
-        varlist.push(enter(var,form.join,preamble))
-    when :formula
-      form = form.join(' ')
-      # in formula's, prefix names that are defined in @vars with `@vars.':
-      form.gsub!(varexp) do
-        if @vars.respond_to?($1)
-          "@vars."+$1
-        else
-          quit("Line #{lineno}: Undefined variable #{$1}")
-        end
+  case form.formtype
+  when :simple_assignment
+    varlist.push(enter(var,form[0],preamble))
+  when :dist
+      varlist.push(enter(var,form.join,preamble))
+  when :formula
+    form = form.join(' ')
+    # in formula's, prefix names that are defined in @vars with `@vars.':
+    form.gsub!(varexp) do
+      if @vars.respond_to?($1)
+        "@vars."+$1
+      else
+        quit("Line #{lineno}: Undefined variable #{$1}")
       end
-      varlist.push(enter(var,form,routine))
-      @singulars.push(var) # remember which vars to prefix with _
-    else # manual array
-      varlist.push(enter(var,form.map { |x| x.to_f }.to_s+'.to_magic',preamble))
     end
+    varlist.push(enter(var,form,routine))
+    @singulars.push(var) # remember which vars to prefix with _
+  else # manual array
+    varlist.push(enter(var,form.map { |x| x.to_f }.to_s+'.to_magic',preamble))
   end
 end
 
@@ -270,15 +271,5 @@ BEGIN {
 		['<%= @last %>'],
 		'<%= o.font %>')
 	% end
-	pids = `ps -o pid= -o comm=`.
-		split("\n").
-		map {|v| v =~ /(gnuplot|perl)/ ? v.strip.split[0] : nil}.
-		compact
-	puts pids.join(' ')
-	puts "Type <enter> to stop"
-	gets
-	pids.each do |v|
-	  system("kill",v)
-	end
 	EOD
 }
