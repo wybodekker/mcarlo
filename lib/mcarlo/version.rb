@@ -3,5 +3,5 @@
 # require'ing 'mcarlo'.
 module Mcarlo
   # The current version of this package
-  VERSION = '2.28'
+  VERSION = '3.0'
 end

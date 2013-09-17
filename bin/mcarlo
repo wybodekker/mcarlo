@@ -1,5 +1,4 @@
 #!/usr/bin/env ruby
-
 require 'ostruct'
 require 'erb'
 require 'wdstats'
@@ -13,7 +12,9 @@ class Array
   # a simple assignment, a formula, an array of values, an empty array
   def formtype
     j = join
-    if j =~ /^[-+.[:digit:]]+$/ # numeric chars only?
+    if j =~ /^'(.*)'$/
+      return :simple_assignment
+    elsif j =~ /^[-+.[:digit:]]+$/ # numeric chars only?
       return :simple_assignment if size == 1
       return :array
     elsif j =~ /^dist\(/
@@ -30,95 +31,70 @@ class Array
   end
 end
 
+CONV = {
+  /\.count/  => ".count(@vars.Nyears)",
+  /\.grow\(/ => ".grow(@vars.Nyears,",
+  /\.npv/  => ".npv(@vars.R,@vars.SGR,@vars.InitR,@vars.RevSpd,@vars.LtEq,@vars.Volat)",
+}
+
 # make entry in @vars and return the name of the variable defined
 def enter(k,v,str)
   @last = k
   line = "@vars.#{k} = #{v}"
+  CONV.each { |k,v| line.gsub!(k,v) }
   str << line.gsub(/@vars\./,'')+"\n"
-  puts line.gsub(/@vars\./,'') if VERBOSE
   eval line
   k
 end
 
 def handle_options
-  o = OpenStruct.new( 
-    :distros   => nil,
-    :list      => nil,
-    :seed      => nil,
-    :width     => 8,
-    :number    => 10_000,
-    :verbose   => nil,
-    :ylog      => false,
-    :font      => 'Courier,10',
-  )
   ARGV.options do |opt|
     opt.banner =  "#{MYNAME} - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten\n"
-    opt.banner << "Usage: #{MYNAME} [options] filename"
+    opt.banner << "Usage: #{MYNAME} [options] [filename]"
     opt.separator "Options:"
- 
-    opt.on('-n','--number=INT',Integer,
-        	'set number of runs to INT',
-        	'must be a multiple of 100',
-        	"default: #{o.number.beautify}") do |v|
-      (v > 0) && (v % 100 == 0) or quit("The number of runs must be a multiple of 100")
-      o.number = v
-    end
- 
-    opt.on('-s','--seed=INT',Integer,
-                'random seed - causes a fixed set of random numbers to be used') do |v| o.seed = v end
- 
-    opt.on('-w','--width=INT',Integer,"printing width for numbers, default: #{o.width}") do |v| o.width = v end
- 
-    opt.on('-l','--list=string',String,
-      'variables to be displayed, comma-separated',
-      'implies --verbose') do |v|
-      o.list = v.split(',')
-      o.verbose = true
-    end
- 
-    opt.on('-p','--plot=string',String,
-      'variables to be plotted, comma-separated') do |v|
-      o.plot = v.split(',')
-    end
- 
-    opt.on('-f','--font=string',String,
-      "font for png output, default: '#{o.font}'") do |v|
-      o.font = v
-    end
-
-    opt.on('-y','--ylog','Frequency (left) Y-axis logarithmic for scatter plots') do o.ylog = true end
  
     opt.on('-h','--help',
       'print this help and exit'
     ) do puts opt.help; exit; end
- 
-    opt.on('-v','--verbose',
-      'show values of all (or all --list-specified) variables for each step'
-    ) do o.verbose = true end
  
     opt.on('-V','--version',
       'print version and exit'
     ) do print_version end
     opt.parse!
   end or quit("Error parsing options",1)
-  o.infile = ARGV.shift # may be nil`
+  infile = ARGV.shift # may be nil`
   ARGV.empty? or quit("too many arguments: "+ARGV.join(" "))
-  o
+  inlines = []
+  if infile # input file specified
+    test(?e,infile)  or quit("File #{infile} does not exist")
+    test(?r,infile)  or quit("File #{infile} is not readable")
+    open(infile) { |i| inlines = i.readlines }
+    path = File.dirname(File.absolute_path(infile))
+  else	# read input from stdin
+    inlines = STDIN.readlines
+    path = '.'
+  end
+  return [path,inlines]
 end
 OPS = ['+','-','*','/','?',':','<','>','<=','>=','**']
-@vars = OpenStruct.new
+@vars = OpenStruct.new(
+  :Plot		=> '',
+  :List		=> '',
+  :Font		=> 'Georgia',
+  :Nyears	=> 8,
+  :Niter	=> 10000,
+  :Seed		=> 0,
+  :Width	=> 8,
+  :Ylog		=> 0,
+  :R		=> 0.05,
+  :SGR		=> 0,
+  :InitR	=> 0,
+  :RevSpd	=> 0,
+  :LtEq		=> 0,
+  :Volat	=> 0,
+)
 
-o = init(%w{gnuplot},:handle_options)
-inlines = []
-if o.infile # input file specified
-  test(?e,o.infile)  or quit("File #{o.infile} does not exist")
-  test(?r,o.infile)  or quit("File #{o.infile} is not readable")
-  open(o.infile) { |i| inlines = i.readlines }
-  o.path = File.dirname(File.absolute_path(o.infile))
-else	# read input from stdin
-  inlines = STDIN.readlines
-  o.path = '.'
-end
+path,inlines = init(%w{gnuplot},:handle_options)
 
 @last = nil	# last variable - something like NPV
 @singulars = []	# names of non-constant singular variables that were defined
@@ -141,21 +117,7 @@ inlines.each do |l|
   var,*form = l.chomp.split(/\s+/)
   var =~ /^[A-Z]/ or quit("User variables (#{var}) must be capitalized")
 
-  # catch options:
-  if var =~ /--(.*)/ then
-    preamble && quit("All option statements must be in the beginning of the input file!")
-    op = $1
-    if op =~/^(plot|list)/ then
-      eval "o.#{op} = (form[0]||'').split(',')"
-    else 
-      eval "o.#{op} = form.join(' ')"
-    end
-    next
-  end
-  
-  # options must have been read now 
   preamble ||= PREAMBLE.result(binding)
-  VERBOSE = o.verbose unless defined? VERBOSE
   form.map! do |x|
     # test validity of operators
     x.scan(/[-+*\/<>?:]+/).each do |op|
@@ -167,10 +129,11 @@ inlines.each do |l|
 
   case form.formtype
   when :simple_assignment
-    varlist.push(enter(var,form[0],preamble))
+    varlist.push(enter(var,form.join(' '),preamble))
   when :dist
       varlist.push(enter(var,form.join,preamble))
   when :formula
+    #--@verbose = !@vars.List.empty?
     form = form.join(' ')
     # in formula's, prefix names that are defined in @vars with `@vars.':
     form.gsub!(varexp) do
@@ -187,37 +150,35 @@ inlines.each do |l|
   end
 end
 
-o.list ||= varlist
-(l = o.list-varlist).empty? or quit("unknown variable#{l.size>1 ? 's' : ''} #{l} in --list option")
-maxlen = varlist.map {|v| v.size}.max # max length of variable name
-
-if VERBOSE
-  puts 'stepping, type <ctrl-C> to stop '.err
-  o.list.each do |v|
-    routine << "  puts '#{v.ljust(maxlen)}:'.sub(/^_/,'') + #{v}.pr(#{o.width})\n"
-  end
-  routine << %q{
-    q = gets
-    exit if q.strip == 'q'
-  }
-end
-routine << "\n  @lastvar_samples.push(_#@last)\n"
-o.plot.each { |v| routine << "@_#{v}_samples.push(_#{v})\n" } if o.plot
-routine << "\n  return(_#{varlist[-1]})\nend\n\n"
-
+lastclass = @vars.send(@singulars[-1]).class
+lastclass == Float ||
+  quit("The last variable (#{@singulars[-1]}) should be a Float, but it is a #{lastclass}")
 # make internal vars non-constants with _ prefix
 @singulars.each { |v|
   routine = routine.gsub(/\b#{v}\b/m,'_'+v).sub(/(^  puts .)_/m,'\1')
 }
 
-postamble = ''
-o.plot.each { |v| postamble << "  @_#{v}_samples = []\n" } if o.plot
-postamble << POSTAMBLE.result(binding)
-
-script = preamble + "\n@lastvar_samples=[]\n" + routine + postamble
 tf = Tempfile.new('mcarlo')
 puts "Run file: #{tf.path.err}"
-tf.puts script
+tf.puts preamble
+tf.puts routine 
+unless @vars.List.empty?
+  puts 'stepping, type <ctrl-C> to stop '.err
+  maxlen = @vars.List.split.map {|v| v.size}.max # max length of variable name
+  @vars.List.split.each do |v|
+    quit("#{v} cannot be listed, because it's an undefined variable") unless @vars.send(v)
+    quit("#{v} cannot be listed, because it's a string") if @vars.send(v).class == String
+    tf.puts "  puts '#{v.ljust(maxlen)}:'.sub(/^_/,'') + #{v}.pr(Width)"
+  end
+  tf.puts 'q = gets'
+  tf.puts 'exit if q.strip == "q"'
+end
+tf.puts "\n  @lastvar_samples.push(_#@last)"
+@vars.Plot.split.each { |v| tf.puts "@_#{v}_samples.push(_#{v})" }
+tf.puts "\n  return(_#{varlist[-1]})\nend\n"
+
+@vars.Plot.split.each { |v| tf.puts "  @_#{v}_samples = []" }
+tf.puts POSTAMBLE.result(binding)
 tf.close
 exec 'ruby '+tf.path
 
@@ -231,45 +192,49 @@ BEGIN {
 	require 'wdstats'
 	require 'rubystats'
 	require 'tempfile'
-	   number = <%= o.number %>
-	     seed = <%= o.seed %>
 	starttime = Time.now
-	srand(seed.to_i) if seed
+	Version = <%= Version %>
+	@lastvar_samples=[]
 	EOD
 
   POSTAMBLE = ERB.new(<<-'EOD'.gsub(/^\t/,''),nil,'%')
-	npv,p1 = [],number/100
-	number.times do |i|
+	srand(Seed) if Seed != 0
+	npv,p1 = [],Niter/100
+	Niter.times do |i|
 	   npv.push(mccalc)
-	% unless VERBOSE
+	% if @vars.List.empty?
 	   printf("\r%3d%%  ",i/p1) if (i/p1)*p1 == i
 	% end
 	end
 
-	puts "\r100%",npv.info("\nTest run with seed=<%= o.seed || 'random' %>")
+	puts "\r100%",npv.info(Version,"\n#{Title} with Seed=#{Seed==0 ? 'random' : Seed}")
 	t = Time.now - starttime
 	t,unit = (t>600 ? [t/60,'minutes'] : [t,'seconds'])
 	puts "           Run time (%s): %#12.3g" % [unit,t]
+	if npv.min == npv.max then 
+	   puts "constant output  (#{npv.mean}) - no plot"
+	   exit 2
+	end
 	e,voffset,error = nil,-275,false
-	% if o.plot
-	["<%= (o.plot).join('","') %>"].each do |xname|
+	Plot.split.each do |xname|
 	  eval "e = @_#{xname}_samples"
 	  if e[0].class != Float then
-	      puts("[1;31mYou can not plot #{xname} because it is an array[0m")
+	      puts("You can not plot #{xname} because it is an array")
               error = true
 	      next
 	  end
 	end
 	exit 1 if error
-	% end
-	% if o.plot
-	plothist('<%= o.path %>',@lastvar_samples.zip(<%=o.plot.map{|v| '@_'+v+'_samples'}.join(',') %>),
-		['<%= @last %>','<%= o.plot.join("','") %>'],
-		'<%= o.font %>')
+	% if ! @vars.Plot.empty?
+	plothist('<%= path %>',@lastvar_samples.zip(<%=@vars.Plot.split.map{|v| '@_'+v+'_samples'}.join(',') %>),
+		['<%= @last %>'] + Plot.split,
+		Font,
+		Ylog > 0)
 	% else
-	plothist('<%= o.path %>',@lastvar_samples.map{|v| [v]},
+	plothist('<%= path %>',@lastvar_samples.map{|v| [v]},
 		['<%= @last %>'],
-		'<%= o.font %>')
+		Font,
+		Ylog > 0)
 	% end
 	EOD
 }

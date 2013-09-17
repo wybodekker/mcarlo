@@ -5,16 +5,6 @@
 
    mcarlo [options] filename
    Options:
-      -n, --number=INT    set number of runs to INT
-                          must be a multiple of 100
-                          default: 10,000
-      -s, --seed=INT      random seed - causes a fixed set of random numbers to be used
-      -w, --width=INT     printing width for numbers, default: 8
-      -l, --list=string   variables to be displayed, comma-separated
-                          implies --verbose
-      -p, --plot=string   Non-constant variables to be plotted, comma-separated
-      -y, --ylog          Y-axis for scatterplots logarithmic
-      -f, --font          font for png output files, default: "Courier,10"
       -h, --help          print this help and exit
       -v, --verbose       show values of all (or all --list-specified) variables for each step
       -V, --version       print version and exit
