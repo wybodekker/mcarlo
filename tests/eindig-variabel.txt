@@ -1,0 +1,48 @@
+# Required variables:
+# -------------------
+Title	'eindig, R variabel'
+Plot	'NPV'
+List	''
+Font	'Courier,10'
+Nyears	6
+Niter	10000
+Seed	1
+Width	8
+Ylog	0
+
+R	0.05
+SGR	0	# gezien deze waarde kiest mc voor eindig
+
+InitR	0.0075	#
+RevSpd	0.48	#
+LtEq	0.04	# gezien deze 4 waarden kiest mc voor R variabel
+Volat	0.021	#
+
+# Model start:
+# ------------
+Revenue	10	20	30	40	50	60
+Costs	5	7	8	12	20	30
+Profit	Revenue-Costs
+NPV	Profit.npv
+
+# eindig, R variabel with Seed=1
+# -------------------------------------------
+#                 mcarlo version:         3.0
+#                wdstats version:       0.2.1
+#                         trials:       10000
+#                           mean:      110.66
+#            population variance:     1.66623
+#  population standard deviation:     1.29083
+#          variation coefficient:   0.0116648
+#     standard error of the mean:   0.0129083
+#                       skewness:  -0.0895382
+#                sample skewness:  -0.0895517
+#                  Zg1 statistic:    -3.65648
+#                       kurtosis:     3.04158
+#                excess kurtosis:   0.0415773
+#         sample excess kurtosis:   0.0421983
+#                  Zg2 statistic:    0.861584
+#                         median:     110.671
+#                            min:      104.39
+#                            max:     115.183
+#            Run time (seconds):         3.05

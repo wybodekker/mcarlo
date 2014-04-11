@@ -1,0 +1,458 @@
+#!/usr/bin/env ruby
+  Version = 3.00
+   MYNAME = File.basename($0)
+<<'DOC'
+= mcarlo - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten
+
+= Synopsis
+mcarlo [options] filename	
+
+Options:
+-h,--help	print this help and exit
+-v,--verbose	show values of all (or all --list-specified) variables for each step
+-V,--version	print version and exit
+
+= Description
+mcarlo berekent bedrijfsresultaten op basis van bedrijfsgegevens die op
+een overzichtelijke manier in een tweekoloms, tab-gescheiden, tabel kunnen
+worden aangeleverd. De eerste kolom van de tabel bevat sleutelwoorden die
+(op 14 na, zie hierna) door de gebruiker gedefinieerd worden. Deze
+sleutelwoorden beginnen met een hoofdletter en bevatten verder alleen
+hoofd- en kleine letters.
+
+In de tweede kolom wordt gedefinieerd hoe de waarde van het sleutelwoord in
+kolom 1 berekend moet worden.
+
+Er zijn 14 sleutelwoorden die niet door de gebruiker worden gekozen. Ze
+liggen vast en vervangen grotendeels de overeenkomstige opties in eerdere
+versies (<3.00):
+
+Niter	Stel het aantal runs in. De default is dat slechts 1 run gedraaid
+	wordt. Meer dan één run heeft alleen zin wanneer een of meer
+	distributie-variabele gebruikt worden, omdat anders steeds dezelfde
+	uitvoer gegenereerd wordt. Met een groter aantal runs onstaat de
+	mogelijkheid de uitvoer te filteren en statistiek op de resultaten
+	van de verschillende variabelen los te laten. Default: 10.
+Nyear	Het aantal jaren waarover gerekend wordt. Default: 8.
+List	Komma-gescheiden lijst van variabelen die in iedere ronde moeten
+	worden afgedrukt. Default: leeg.
+Plot	Komma-gescheiden lijst van niet-constante, singuliere variabelen
+	die na afloop moeten worden geplot. Per variabele wordt de
+	verdeling ervan geplot, met daarnaast de laatste variabele (meestal
+	NPV) als functie van deze. Default: leeg.
+Width	Zet de veldbreedte waarbinnen berekende waarden worden
+	afgedrukt. Het format waarmee dat gebeurt wordt automatisch
+	geoptimaliseerd. Default: 8.
+Ylog	Maak y-as voor scatterplot logaritmisch. Default: lineair.
+Font	Font voor png output files. De default is Georgia.
+Seed	Initialiseert de randomgenerator met de opgegeven waarde. Vooral
+	voor test-doeleinden: zorgt dat altijd dezelfde output wordt
+	gegenereerd. Default: random.
+R	De discount rate. Default: 0.05.
+SGR	Sustainable Growth Rate. Default: 0 (=oneindig).
+InitR	Initial Discount Rate voor cir functie. Default: 0
+RevSpd	Mean Reversion Speed. Default: 0
+LtEq	Longterm Equilibrium. Default: 0
+Volat	Volatility. Default: 0
+
+= Enkelvoudige variabelen
+Als die waarde enkelvoudig is (in tegenstelling tot een array) kan kolom 2
+een getal bevatten, of de naam van een eerder gedefinieerd sleutelwoord, of
+een eenvoudige expressie. Enkele voorbeelden:
+
+    N             6
+    Growth        5%
+    Discount      Growth*0.8
+    Inflation     Growth > 10% ? 10% : Growth*0.8
+
+We zien hier meteen dat getallen ook in de vorm van percentages kunnen
+worden ingegeven (10% is equivalent met 0.1) en dat als eenvoudige
+expressie ook een if-then-else expressie van de vorm
+
+    expr ? truevalue : falsevalue
+
+mogelijk is. Inflation krijgt hierboven dus de waarde 0.04 (4%).
+
+= Distributiefunctie-variabelen
+De |dist| functie genereert een functievariabele, die een |sample| operator
+kent waarvan elk gebruik een nieuwe trekking oplevert uit een door de
+functie gedefinieerde verdeling. Er zijn vier verdelingen beschikbaar:
+
+normal		wordt gedefinieerd met |dist('normal',mean,standarddeviation)|
+lognormal	wordt gedefinieerd met |dist('lognormal',mean,standarddeviation)|
+triangular	wordt gedefinieerd met |dist('triangular',lowerlimit,upperlimit,mode)|
+uniform		wordt gedefinieerd met |dist('uniform',lowerlimit,upperlimit)|
+
+Voor de normaal- en lognormaal-verdelingen kan de sample-methode twee
+argumenten meekrijgen: |min| en |max|. Wanneer |min| onbegrensd moet blijven,
+geef dan |nil| op; voorbeelden:
+
+    Test    dist('normal',4%, 2%)
+    S       Test.sample             # waarden tussen -oneindig en oneindig
+    S       Test.sample(-1,1)       # waarden tussen -1 en 1
+    S       Test.sample(nil,1)      # waarden tussen -oneindig en 1
+    S       Test.sample(0)          # waarden tussen 0 en oneindig
+    S       Test.sample(0,nil)      # waarden tussen 0 en oneindig
+
+Een voorbeeld:
+
+    Growth        dist('normal',4%, 2%)
+    Xa            Growth.sample
+    Xb            Growth.sample
+    Xc            Growth.sample
+    Xd            Growth.sample
+    Xe            Growth.sample
+
+Evaluatie van |Growth.sample| levert in |Xa|, |Xb|, |Xc|, |Xd| en |Xe|,
+bijvoorbeeld, 0.0353, 0.0584, 0.0485, 0.0336 en 0.0396
+
+= Array variabelen
+Een definitie in kolom 2 kan ook een array opleveren. Enkele voorbeelden
+maken dit snel duidelijk:
+
+    Year          2011    2012    2013    2014    2015    2016
+
+Hier is een array van 6 jaren dus expliciet ingevoerd in 6 tab-gescheiden kolommen.
+
+    Year          2011.count
+
+Dit levert in |Year| hetzelfde resultaat op, waarbij de bovenaan
+gedefinieerde |Nyears| het aantal kolommen bepaalt.
+
+    LabourCost    13.grow(Inflation)
+
+Dit levert in LabourCost een array van 6 elementen op, het eerste is 13, de volgende
+groeien met de Inflation; het resultaat is dus [13, 13.52, 14.06, 14.62,
+15.21, 15.82]
+
+    LabourCost    13.grow(Inflation,2)
+
+Het tweede argument (dat een default waarde 1 heeft) geeft aan in welk jaar
+de variabele zijn eerste waarde krijgt, hier dus in het tweede jaar (2012).
+Het resultaat is dus dat LabourCost de waarden [0, 13, 13.52, 14.06, 14.62, 15.21] krijgt.
+
+Arrays kunnen ook met elkaar of met een enkelvoudige variabele worden
+vermenigvuldigd, gedeeld, opgeteld, afgetrokken, waarbij de eventuele
+enkelvoudige variabele dat altijd de tweede operand moet zijn:
+
+    Years         Year*3
+
+levert in Years [6033, 6036, 6039, 6042, 6045, 6048] op.
+
+    Years         Year-2000
+
+levert in Years [11, 12, 13, 14, 15, 16] op.
+
+    Yearsquare    Years*Years
+
+vervangt de elementen van Years door hun kwadraten, wat dus [121, 144, 169, 196, 225, 256]
+oplevert.
+
+    Rsum          Years.runningsum
+
+genereert de lopende som van de elementen (hier 11..16) van het array. Dat
+levert hier dus [11, 23, 36, 50, 65, 81].
+
+    MyArray       2       -5      -6      -7      8       6
+    Ppart         MyArray.pospart
+
+Vervangt alle negatieve elementen door 0 en levert dus in Ppart [2, 0, 6, 0, 8, 6] op.
+
+    Npart         MyArray.negpart
+
+Vervangt alle positieve elementen door 0 en levert dus in Npart [0, -5, 0, -7, 0, 0] op.
+
+    MyArray       -100.0  12.0    13.0    14.0    15.0    16.0
+    Gval          MyArray.gradval(Growth,Discount)
+
+Levert een array van gelijke lengte, met alleen nullen, behalve in het laatste element, 
+dat de Graduation Value van de oorspronkelijke elementen bevat, berekend op basis van een
+Sustainable Growth Rate _Growth_ en een Discount Rate _Discount_.
+Gval wordt zo [0, 0, 0, 0, 0, -1680]
+
+    TCF           MyArray.tcf
+
+Berekent Taxloss Carried Forward. TCF krijgt hier dus de waarde [0, -100, -88, -75, -61, -46.0]
+
+    CIR           0.005.cir(revspeed,lteq,volatility,eta)
+
+levert een array met interest rates volgens Cox, Ingersoll en Ross,
+beginnend met 0.005 en berekend met mean reversion speed, long-term
+equilibrium interest rate, volatility of interest rate en eta.
+
+    CIR           0.075.cir(10, 0.6, 0.04, 0.021, -2.831) * 100.0
+
+levert een array [7.500, 3.772, 2.754, 2.515, 2.463, 2.452]
+
+= Enkelvoudige variabelen uit array variabelen
+Een expressie in kolom 2 kan ook uit een array weer een enkelvoudig getal opleveren.
+
+    MySum         MyArray.sum
+
+levert in MySum de som van de array-elementen, hier dus -30
+
+    MyMin         MyArray.min
+
+levert in MyMin de laagste waarde van MyArray, -100
+
+    MyMax         MyArray.max
+
+levert in MyMax de maximum waarde van MyArray, 16
+
+    MyArray       9.35    9.91    10.50   11.13   11.80   12.51
+    NPV           MyArray.npv(5%)
+
+levert in NPV de Net Present Value op basis van discount rate van, hier,
+5%, met 54.70 als resultaat.
+
+    IRR           MyArray.irr
+
+levert in IRR de Internal Rate of Return, hier 1443239783.29
+DOC
+
+require 'optparse'
+require 'ostruct'
+require 'erb'
+require 'date'
+require 'wdstats'
+require 'tempfile'
+
+class Array
+  # return the type of the array in mcarlo terms:
+  # a simple assignment, a formula, an array of values, an empty array
+  def formtype
+    j = join
+    if j =~ /^'(.*)'$/
+      return :simple_assignment
+    elsif j =~ /^[-+.[:digit:]]+$/ # numeric chars only?
+      return :simple_assignment if size == 1
+      return :array
+    elsif j =~ /^dist\(/
+      if j =~ /^dist\((['"])(normal|lognormal|uniform|triangular)\1,[-+.\d]+%?,[-+.\d]+%?(,[-+.\d]+%?)?\)/
+        return :dist
+      else
+        quit("Distribution expression (#{j}) malformed")
+      end
+    elsif j =~ /^([^A-Za-z0-9(])/ 
+      quit("A formula (#{join(' ')}) may not start with #{$1}")
+    else
+      return :formula
+    end
+  end
+end
+
+CONV = {
+  /\.count/  => ".count(@vars.Nyears)",
+  /\.grow\(/ => ".grow(@vars.Nyears,",
+  /\.npv/  => ".npv(@vars.R,@vars.SGR,@vars.InitR,@vars.RevSpd,@vars.LtEq,@vars.Volat)",
+}
+
+# make entry in @vars and return the name of the variable defined
+def enter(k,v,str)
+  @last = k
+  line = "@vars.#{k} = #{v}"
+  CONV.each { |k,v| line.gsub!(k,v) }
+  str << line.gsub(/@vars\./,'')+"\n"
+  eval line
+  k
+end
+
+def quit(mess=nil,exitvalue=1)
+  handle = exitvalue == 0 ? STDOUT : STDERR
+  handle.puts mess if mess
+  exit(exitvalue)
+end
+
+OPS = ['+','-','*','/','?',':','<','>','<=','>=','**']
+@vars = OpenStruct.new(
+  :Plot		=> '',
+  :List		=> '',
+  :Font		=> 'Georgia',
+  :Nyears	=> 8,
+  :Niter	=> 10000,
+  :Seed		=> 0,
+  :Width	=> 8,
+  :Ylog		=> 0,
+  :R		=> 0.05,
+  :SGR		=> 0,
+  :InitR	=> 0,
+  :RevSpd	=> 0,
+  :LtEq		=> 0,
+  :Volat	=> 0,
+)
+
+ARGV.options do |opt|
+  opt.banner =  "#{MYNAME} - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten\n"
+  opt.banner << "Usage: #{MYNAME} [options] [filename]"
+  opt.separator "Options:"
+ 
+  opt.on('-h','--help', 'print this help and exit') do
+    puts opt.help
+    exit
+  end
+  opt.on('-V','--version', 'print version and exit') do
+    puts "mcarlo version #{Version}"
+    exit 0
+  end
+  opt.on('-I') do
+    system("instscript #{MYNAME}")
+    exit 0
+  end
+  opt.parse!
+end or quit("Error parsing options",1)
+
+infile = ARGV.shift # may be nil`
+ARGV.empty? or quit("too many arguments: "+ARGV.join(" "))
+inlines = []
+if infile # input file specified
+  test(?e,infile)  or quit("File #{infile} does not exist")
+  test(?r,infile)  or quit("File #{infile} is not readable")
+  open(infile) { |i| inlines = i.readlines }
+  path = File.dirname(File.absolute_path(infile))
+else	# read input from stdin
+  inlines = STDIN.readlines
+  open('/tmp/MCARLOLOG','a',644) do |f| f.puts DateTime.now,inlines end
+  path = '.'
+end
+
+@last = nil	# last variable - something like NPV
+@singulars = []	# names of non-constant singular variables that were defined
+
+lineno = 0
+routine = "def mccalc\n"
+varlist,varexp = [],Regexp.new(/([A-Z][a-zA-Z]*)/)
+
+# declare the preamble here, but read the template into it only after any
+# option statements have been read from the input file.
+preamble = nil
+inlines.each do |l|
+  lineno += 1
+  l.sub!(/\s*#.*/,'')
+  next if l =~ /^\s*$/ # skip lege regels
+  
+  # replace number-fields ending in % with number/100
+  l.gsub!(/([-+.0-9]+)%/) { |x| x.to_f/100 }
+  var,*form = l.chomp.split(/\s+/)
+  var,*form = l.chomp.split(/\s+/)
+  var =~ /^[A-Z]/ or quit("User variables (#{var}) must be capitalized")
+
+  preamble ||= PREAMBLE.result(binding)
+  form.map! do |x|
+    # test validity of operators
+    x.scan(/[-+*\/<>?:]+/).each do |op|
+      OPS.index(op) or quit("Line #{lineno}: Operator #{op} is not allowed; maybe you need parentheses?")
+    end
+    x = nil if x.gsub(/\s+/,'').empty?
+    x
+  end
+
+  case form.formtype
+  when :simple_assignment
+    varlist.push(enter(var,form.join(' '),preamble))
+  when :dist
+      varlist.push(enter(var,form.join,preamble))
+  when :formula
+    form = form.join(' ')
+    # in formula's, prefix names that are defined in @vars with `@vars.':
+    form.gsub!(varexp) do
+      if @vars.respond_to?($1)
+        "@vars."+$1
+      else
+        quit("Line #{lineno}: Undefined variable #{$1}")
+      end
+    end
+    varlist.push(enter(var,form,routine))
+    @singulars.push(var) # remember which vars to prefix with _
+  else # manual array
+    varlist.push(enter(var,form.map { |x| x.to_f }.to_s+'.to_magic',preamble))
+  end
+end
+@singulars.empty? && quit("You did not define any new variables")
+lastclass = @vars.send(@singulars[-1]).class
+lastclass == Float ||
+  quit("The last variable (#{@singulars[-1]}) should be a Float, but it is a #{lastclass}")
+# make internal vars non-constants with _ prefix
+@singulars.each { |v|
+  routine = routine.gsub(/\b#{v}\b/m,'_'+v).sub(/(^  puts .)_/m,'\1')
+}
+
+tf = Tempfile.new('mcarlo')
+puts "Run file: [31;1m#{tf.path}[0m"
+tf.puts preamble
+tf.puts routine 
+unless @vars.List.empty?
+  puts '[31;1mstepping, type <ctrl-C> to stop[0m '
+  maxlen = @vars.List.split.map {|v| v.size}.max # max length of variable name
+  @vars.List.split.each do |v|
+    quit("#{v} cannot be listed, because it's an undefined variable") unless @vars.send(v)
+    quit("#{v} cannot be listed, because it's a string") if @vars.send(v).class == String
+    tf.puts "  puts '#{v.ljust(maxlen)}:'.sub(/^_/,'') + #{v}.pr(Width)"
+  end
+  tf.puts 'q = gets'
+  tf.puts 'exit if q.strip == "q"'
+end
+tf.puts "\n  @lastvar_samples.push(_#@last)"
+@vars.Plot.split.each { |v| tf.puts "@_#{v}_samples.push(_#{v})" }
+tf.puts "\n  return(_#{varlist[-1]})\nend\n"
+
+@vars.Plot.split.each { |v| tf.puts "  @_#{v}_samples = []" }
+tf.puts POSTAMBLE.result(binding)
+tf.close
+exec 'ruby '+tf.path
+
+# __TEMPLATES__
+BEGIN {
+  require 'erb'
+
+  PREAMBLE = ERB.new(<<-'EOD'.gsub(/^\t/,''),nil,'%')
+	#!/usr/bin/env ruby
+	# encoding: utf-8
+	require 'wdstats'
+	require 'rubystats'
+	require 'tempfile'
+	starttime = Time.now
+	Version = <%= Version %>
+	@lastvar_samples=[]
+	EOD
+
+  POSTAMBLE = ERB.new(<<-'EOD'.gsub(/^\t/,''),nil,'%')
+	srand(Seed) if Seed != 0
+	npv,p1 = [],Niter/100
+	Niter.times do |i|
+	   npv.push(mccalc)
+	% if @vars.List.empty?
+	   printf("\r%3d%%  ",i/p1) if (i/p1)*p1 == i
+	% end
+	end
+
+	puts "\r100%",npv.info(Version,"\n#{Title} with Seed=#{Seed==0 ? 'random' : Seed}")
+	t = Time.now - starttime
+	t,unit = (t>600 ? [t/60,'minutes'] : [t,'seconds'])
+	puts "           Run time (%s): %#12.3g" % [unit,t]
+	if npv.min == npv.max then 
+	   puts "constant output  (#{npv.mean}) - no plot"
+	   exit 2
+	end
+	e,voffset,error = nil,-275,false
+	Plot.split.each do |xname|
+	  eval "e = @_#{xname}_samples"
+	  if e[0].class != Float then
+	      puts("You can not plot #{xname} because it is an array")
+              error = true
+	      next
+	  end
+	end
+	exit 1 if error
+	% if ! @vars.Plot.empty?
+	plothist('<%= path %>',@lastvar_samples.zip(<%=@vars.Plot.split.map{|v| '@_'+v+'_samples'}.join(',') %>),
+		['<%= @last %>'] + Plot.split,
+		Font,
+		Ylog > 0)
+	% else
+	plothist('<%= path %>',@lastvar_samples.map{|v| [v]},
+		['<%= @last %>'],
+		Font,
+		Ylog > 0)
+	% end
+	EOD
+}

@@ -1,0 +1,49 @@
+# Required variables:
+# -------------------
+Title	'oneindig, R constant'
+Plot	'NPV'
+List	''
+Font	'Courier,10'
+Nyears	6
+Niter	10000
+Seed	1
+Width	8
+Ylog	0
+
+R	0.05
+SGR	0.02	# gezien deze waarde kiest mc voor oneindig
+
+InitR	0	#
+RevSpd	0	#
+LtEq	0	# gezien deze 4 waarden kiest mc voor R constant
+Volat	0	#
+
+# Model start:
+# ------------
+Revenue	10	20	30	40	50	60
+Costs	5	7	8	12	20	30
+Profit	Revenue-Costs
+NPV	Profit.npv
+
+# oneindig, R constant with Seed=1
+# -------------------------------------------
+#                 mcarlo version:         3.0
+#                wdstats version:       0.2.1
+#                         trials:       10000
+#                           mean:     865.625
+#            population variance: 2.29658e-20
+#  population standard deviation: 1.51545e-10
+#          variation coefficient: 1.75069e-13
+#     standard error of the mean: 1.51545e-12
+#                       skewness:          -1
+#                sample skewness:    -1.00015
+#                  Zg1 statistic:    -40.8371
+#                       kurtosis:           1
+#                excess kurtosis:          -2
+#         sample excess kurtosis:     -2.0004
+#                  Zg2 statistic:    -40.8432
+#                         median:     865.625
+#                            min:     865.625
+#                            max:     865.625
+#            Run time (seconds):        0.259
+# constant output  (865.6253359063886) - no plot

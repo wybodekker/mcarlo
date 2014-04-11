@@ -1,0 +1,50 @@
+# Required variables:
+# -------------------
+Title	'eindig, R constant'
+Plot	''		# vars to be plotted vs. NPV
+List	''		# vars to be listed
+Font	'Courier,10'	# for pdf output
+Nyears	8		# number of years
+Niter	10000		# number if iterations
+Seed	0		# 0 for random start, irreproducible results otherwise
+Width	8		# significant digits
+Ylog	0		# logarithmic y axis for var vs. NPV
+
+R	0.05		# discount rate
+SGR	0		# sustainable growth rate
+
+InitR	0		# initial discount rate for cir
+RevSpd	0		# mean reversion speed
+LtEq	0		# long-term equilibrium interest rate
+Volat	0		# volatility
+
+# Model start:
+# ------------
+Revenue	10	20	30	40	50	60
+Costs	5	7	8	12	20	30
+Profit	Revenue-Costs
+NPV	Profit.npv
+
+# eindig, R constant with Seed=1
+# -------------------------------------------
+#                 mcarlo version:         3.0
+#                wdstats version:       0.2.1
+#                         trials:       10000
+
+#                           mean:     104.486
+#            population variance: 3.62619e-22
+#  population standard deviation: 1.90425e-11
+#          variation coefficient:  1.8225e-13
+#     standard error of the mean: 1.90425e-13
+#                       skewness:          -1
+#                sample skewness:    -1.00015
+#                  Zg1 statistic:    -40.8371
+#                       kurtosis:           1
+#                excess kurtosis:          -2
+#         sample excess kurtosis:     -2.0004
+#                  Zg2 statistic:    -40.8432
+#                         median:     104.486
+#                            min:     104.486
+#                            max:     104.486
+#            Run time (seconds):        0.199
+# constant output  (104.4856313368962) - no plot

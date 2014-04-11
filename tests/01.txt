@@ -1,0 +1,43 @@
+# Required variables:
+# -------------------
+Title	'eindig, R constant'
+Plot	'NPVUncorrected'
+List	''
+Font	''
+Nyears	10
+Niter	11000
+Seed	1
+Width	8
+Ylog	0
+
+R	5%
+SGR	0	# gezien deze waarde kiest mc voor eindig
+
+InitR	0	#
+RevSpd	0	#
+LtEq	0	# gezien deze 4 waarden kiest mc voor R constant
+Volat	0	#
+
+# Model start:
+# ------------
+
+Efficacy               dist('normal',50,15)
+Alternative            dist('triangular',70,100,70)
+MarketSizeDist         dist('normal',1800,100)
+E                      Efficacy.sample
+A                      Alternative.sample
+MarketingCosts         E>30 ? 300 : 0.0
+MarketingCostGrowth    6%
+MarketSizeGrowth       6%
+Costs                  100
+Year                   2012.count
+MarketSizeStart        MarketSizeDist.sample
+MarketSize             MarketSizeStart.grow(MarketSizeGrowth)
+MarketShareStart       E>30 ? E**2/(E**2 + A**2) : 0.0
+MarketShare            MarketShareStart.grow(0)
+GrossProfit            MarketSize*MarketShare
+Marketing              MarketingCosts.grow(MarketingCostGrowth)
+Profit                 GrossProfit - Marketing
+NPVUncorrected         Profit.npv
+NPVCorrected           (NPVUncorrected*(1 + R)**0.5)/(1 + R)**3
+NPV                    NPVCorrected-Costs
