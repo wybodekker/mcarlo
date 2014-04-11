@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-  Version = 3.00
+  Version = '3.00'
    MYNAME = File.basename($0)
 <<'DOC'
 = mcarlo - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten
