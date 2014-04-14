@@ -291,7 +291,7 @@ ARGV.options do |opt|
     exit
   end
   opt.on('-V','--version', 'print version and exit') do
-    puts "mcarlo version #{Version}"
+    puts Version
     exit 0
   end
   opt.on('-I') do
