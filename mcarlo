@@ -208,6 +208,12 @@ levert in NPV de Net Present Value op basis van discount rate van, hier,
     IRR           MyArray.irr
 
 levert in IRR de Internal Rate of Return, hier 1443239783.29
+
+= Author and copyright
+Author	Wybo Dekker
+Email	U{Wybo@dekkerdocumenten.nl}{wybo@dekkerdocumenten.nl}
+License	Released under the U{www.gnu.org/copyleft/gpl.html}{GNU General Public License}
+
 DOC
 
 require 'optparse'

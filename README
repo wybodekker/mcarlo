@@ -2,10 +2,10 @@
 -------:|:--------------------------------------
  script:| mcarlo - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten
    type:| ruby
- author:| 
-  email:| 
+ author:| Wybo Dekker
+  email:| wybo@dekkerdocumenten.nl
 version:| 3.00
-license:| 
+license:| Released under the GNU General Public License
 
 mcarlo berekent bedrijfsresultaten op basis van bedrijfsgegevens die op
 een overzichtelijke manier in een tweekoloms, tab-gescheiden, tabel kunnen
