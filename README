@@ -1,0 +1,16 @@
+|
+-------:|:--------------------------------------
+ script:| mcarlo - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten
+   type:| ruby
+ author:| 
+  email:| 
+version:| 3.00
+license:| 
+
+mcarlo berekent bedrijfsresultaten op basis van bedrijfsgegevens die op
+een overzichtelijke manier in een tweekoloms, tab-gescheiden, tabel kunnen
+worden aangeleverd. De eerste kolom van de tabel bevat sleutelwoorden die
+(op 14 na, zie hierna) door de gebruiker gedefinieerd worden. Deze
+sleutelwoorden beginnen met een hoofdletter en bevatten verder alleen
+hoofd- en kleine letters.
+

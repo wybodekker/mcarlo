@@ -295,7 +295,7 @@ ARGV.options do |opt|
     exit 0
   end
   opt.on('-I') do
-    system("instscript #{MYNAME}")
+    system("instscript --markdown #{MYNAME}")
     exit 0
   end
   opt.parse!
