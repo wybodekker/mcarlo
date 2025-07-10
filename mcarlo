@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
-  Version = '3.00'
+# encoding: utf-8
+  Version = '3.01'
    MYNAME = File.basename($0)
 <<'DOC'
 = mcarlo - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten
@@ -7,7 +8,7 @@
 = Synopsis
 mcarlo [options] filename	
 
-Options:
+= Options
 -h,--help	print this help and exit
 -v,--verbose	show values of all (or all --list-specified) variables for each step
 -V,--version	print version and exit
@@ -209,11 +210,11 @@ levert in NPV de Net Present Value op basis van discount rate van, hier,
 
 levert in IRR de Internal Rate of Return, hier 1443239783.29
 
-= Author and copyright
-Author	Wybo Dekker
-Email	U{Wybo@dekkerdocumenten.nl}{wybo@dekkerdocumenten.nl}
-License	Released under the U{www.gnu.org/copyleft/gpl.html}{GNU General Public License}
+= Author
+[Wybo Dekker](wybodekker@me.com)
 
+= Copyright
+Released under the [GNU General Public License](www.gnu.org/copyleft/gpl.html)
 DOC
 
 require 'optparse'
@@ -222,6 +223,7 @@ require 'erb'
 require 'date'
 require 'wdstats'
 require 'tempfile'
+require 'colorize'
 
 class Array
   # return the type of the array in mcarlo terms:
@@ -287,24 +289,24 @@ OPS = ['+','-','*','/','?',':','<','>','<=','>=','**']
   :Volat	=> 0,
 )
 
-ARGV.options do |opt|
-  opt.banner =  "#{MYNAME} - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten\n"
-  opt.banner << "Usage: #{MYNAME} [options] [filename]"
-  opt.separator "Options:"
+ARGV.options do |opts|
+  opts.banner =  "#{MYNAME} - evaluatie van bedrijfsresultaten met MonteCarlo faciliteiten\n"
+  opts.banner << "Usage: #{MYNAME} [options] [filename]"
+  opts.separator "Options:"
  
-  opt.on('-h','--help', 'print this help and exit') do
-    puts opt.to_s.sub(/^ *-I\n/,'')
+  opts.on('-h','--help', 'print this help and exit') do
+    puts opts.to_s.sub(/^ *-I\n/,'')
     exit
   end
-  opt.on('-V','--version', 'print version and exit') do
+  opts.on('-V','--version', 'print version and exit') do
     puts Version
     exit 0
   end
-  opt.on('-I') do
+  opts.on('-I') do
     system("instscript --markdown #{MYNAME}")
     exit 0
   end
-  opt.parse!
+  opts.parse!
 end or quit("Error parsing options",1)
 
 infile = ARGV.shift # may be nil`
@@ -383,11 +385,11 @@ lastclass == Float ||
 }
 
 tf = Tempfile.new('mcarlo')
-puts "Run file: [31;1m#{tf.path}[0m"
+puts "Run file: "+ tf.path.light_red
 tf.puts preamble
 tf.puts routine 
 unless @vars.List.empty?
-  puts '[31;1mstepping, type <ctrl-C> to stop[0m '
+  puts 'stepping, type <ctrl-C> to stop '.light_red
   maxlen = @vars.List.split.map {|v| v.size}.max # max length of variable name
   @vars.List.split.each do |v|
     quit("#{v} cannot be listed, because it's an undefined variable") unless @vars.send(v)
@@ -410,7 +412,7 @@ exec 'ruby '+tf.path
 BEGIN {
   require 'erb'
 
-  PREAMBLE = ERB.new(<<-'EOD'.gsub(/^\t/,''),nil,'%')
+  PREAMBLE = ERB.new(<<-'EOD'.gsub(/^\t/,''),trim_mode:'%')
 	#!/usr/bin/env ruby
 	# encoding: utf-8
 	require 'wdstats'
@@ -421,7 +423,7 @@ BEGIN {
 	@lastvar_samples=[]
 	EOD
 
-  POSTAMBLE = ERB.new(<<-'EOD'.gsub(/^\t/,''),nil,'%')
+  POSTAMBLE = ERB.new(<<-'EOD'.gsub(/^\t/,''),trim_mode:'%')
 	srand(Seed) if Seed != 0
 	npv,p1 = [],Niter/100
 	Niter.times do |i|
